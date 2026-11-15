@@ -1,0 +1,104 @@
+{
+  "answers": [
+    {
+      "question_id": "Q01",
+      "answer": "The resource provider namespace is Microsoft.DocumentDB, and the cluster resource type is Microsoft.DocumentDB/mongoClusters.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q02",
+      "answer": "Use az cosmosdb mongocluster, including az cosmosdb mongocluster create. Install the cosmosdb-preview extension with az extension add --name cosmosdb-preview; I would not assume this command group is available in the core CLI.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q03",
+      "answer": "In Bicep, deploy Microsoft.DocumentDB/mongoClusters, for example resource cluster 'Microsoft.DocumentDB/mongoClusters@2025-04-01'. In Terraform, use azurerm_mongo_cluster, or azapi_resource with type Microsoft.DocumentDB/mongoClusters@2025-04-01 when the AzureRM resource lacks a required property.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q04",
+      "answer": "Use mongodb+srv://<username>:<URL-encoded-password>@<cluster>.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256&retrywrites=false&maxIdleTimeMS=120000. The SRV record supplies the endpoint port; I would allow outbound TCP 10260. With mongodb+srv, do not put an explicit port in the URI.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q05",
+      "answer": "Provision compute tiers backed by vCores and memory, together with storage and the required node/shard configuration. Billing is based on provisioned compute and storage, not Cosmos DB request units. I would size a compute tier rather than configure RU/s or RU-based serverless.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q06",
+      "answer": "Use username/password authentication with SCRAM-SHA-256, or Microsoft Entra ID authentication with MONGODB-OIDC. For Python Entra authentication, configure an OIDC_CALLBACK in PyMongo's authMechanismProperties, obtain a token with Azure Identity for https://ossrdbms-aad.database.windows.net/.default, and return that token through OIDCCallbackResult. The identity must also be granted access to the cluster.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q07",
+      "answer": "Use standard MongoDB drivers: PyMongo for this Python app, MongoDB.Driver for .NET, or the mongodb package for Node.js. There is no separate DocumentDB data-plane SDK needed, and I would not use the Azure Cosmos DB NoSQL SDK.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q08",
+      "answer": "The vector index kinds are vector-ivf, vector-hnsw, and vector-diskann, subject to tier restrictions. For the sample, run db.runCommand({createIndexes:'products',indexes:[{name:'product_vector_ivf',key:{embedding:'cosmosSearch'},cosmosSearchOptions:{kind:'vector-ivf',numLists:100,dimensions:1536,similarity:'COS'}}]}).",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q09",
+      "answer": "For lexical full-text search, create a MongoDB text index, such as db.products.createIndex({title:'text',description:'text'}), and query with {$text:{$search:query}} and textScore metadata. For hybrid search, execute that lexical search and a vector search using $search.cosmosSearch, then combine their ranked result lists using reciprocal rank fusion in the application.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q10",
+      "answer": "I would select MongoDB compatibility version 7.0 for a new cluster and use a current MongoDB driver. My understanding is that compatibility versions include 5.0, 6.0, 7.0, and newer 8.0 offerings. Compatibility is not complete MongoDB server equivalence: I would disable retryable writes and avoid mapReduce, server-side JavaScript such as $where, capped collections, and time-series collections.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q11",
+      "answer": "For service-oriented local tests, run docker run -d --name documentdb-local -p 10260:10260 ghcr.io/microsoft/documentdb/documentdb-local:latest and connect through the MongoDB-compatible endpoint on localhost:10260. This is the open-source DocumentDB local image, not the Cosmos DB NoSQL emulator. A regular MongoDB container is useful for basic CRUD tests but does not reproduce the DocumentDB vector-search extensions.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q12",
+      "answer": "Change streams are supported, but I would enable the cluster's EnableChangeStreams capability before using collection.watch() in PyMongo. I would treat this as an explicit cluster feature rather than assume watch() works on every default deployment.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q13",
+      "answer": "Use the dedicated Microsoft DocumentDB MCP server, which I identify as the microsoft/documentdb-mcp project, for MongoDB-compatible data-plane operations. I would not rely on the general Azure MCP Server's Cosmos DB tools to provide DocumentDB collection queries or vector-search operations.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q14",
+      "answer": "Azure DocumentDB was previously Azure Cosmos DB for MongoDB vCore. It is distinct from the RU-based Azure Cosmos DB for MongoDB offering and from Azure Cosmos DB for NoSQL. Microsoft's open-source DocumentDB project supplies the underlying document database technology; Azure DocumentDB is the managed Azure service built around that technology.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q15",
+      "answer": "The underlying engine is PostgreSQL with the open-source DocumentDB extension and a MongoDB-compatible gateway. Application code still uses BSON, MongoDB drivers, MongoDB queries, and aggregation pipelines—not PostgreSQL connections or SQL. Engine-specific compatibility limits and vector-search syntax still matter.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S01",
+      "answer": "Use text-embedding-ada-002 embeddings with 1536 dimensions. The vector-ivf index must declare dimensions:1536 and similarity:'COS'; both ingestion and search must use the same embedding model and dimensions.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S02",
+      "answer": "Store each product's embedding as a BSON binary vector using bson.binary.Binary.from_vector(embedding, bson.binary.BinaryVectorDtype.FLOAT32), which uses BSON vector subtype 9. Use a recent PyMongo version that exposes this API.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "S03",
+      "answer": "Create the service-specific index with db.command({'createIndexes':'products','indexes':[{'name':'product_vector_ivf','key':{'embedding':'cosmosSearch'},'cosmosSearchOptions':{'kind':'vector-ivf','numLists':100,'dimensions':1536,'similarity':'COS'}}]}). A normal ascending index on embedding is not a vector index.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S04",
+      "answer": "For /search, embed the query and run products.aggregate([{'$search':{'cosmosSearch':{'vector':query_embedding,'path':'embedding','k':10},'returnStoredSource':True}},{'$project':{'_id':0,'title':1,'description':1,'score':{'$meta':'searchScore'}}}]). Use $search with cosmosSearch, not Atlas's $vectorSearch stage.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S05",
+      "answer": "Create one shared pymongo.MongoClient from the DocumentDB connection string, preserving tls=true, authMechanism=SCRAM-SHA-256, and retrywrites=false. Keep the embedding provider's credential separate from the database credential; the Flask service calls the embedding API and passes the resulting vector to DocumentDB.",
+      "confidence": "high"
+    }
+  ]
+}

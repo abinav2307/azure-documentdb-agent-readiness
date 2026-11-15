@@ -1,0 +1,168 @@
+{
+  "verdict": "sufficient_with_assumptions",
+  "summary": "The prompt defines a workable Flask semantic-search sample, and installed skills cover DocumentDB query syntax, client reuse, and reproducible seed practices. The builder must still choose runtime versions, embedding provider, catalog data, API details, and deployment scope; the requested BSON binary vector representation is not explained or confirmed by the loaded vector-search guidance.",
+  "rubric": [
+    {
+      "item": "Goal and scenario",
+      "status": "specified",
+      "blocking": false,
+      "found_in_prompt": "Build a product catalog with natural-language search returning semantically similar products.",
+      "skill_that_covers": "",
+      "assumption_if_unanswered": "",
+      "note": "Clearly demonstrates database-backed semantic product retrieval. No exact umbrella skill named 'Azure DocumentDB' is installed, but the DocumentDB skill suite clearly matches the reference."
+    },
+    {
+      "item": "Workflow type",
+      "status": "specified",
+      "blocking": false,
+      "found_in_prompt": "The endpoint embeds a query and retrieves similar products.",
+      "skill_that_covers": "",
+      "assumption_if_unanswered": "",
+      "note": "A direct, no-agent request pipeline; no agent framework is needed."
+    },
+    {
+      "item": "Language and runtime",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "Python Flask app.",
+      "skill_that_covers": "",
+      "assumption_if_unanswered": "Python 3.12 with Flask 3.1.x.",
+      "note": "Language and framework are fixed; runtime and framework versions are not."
+    },
+    {
+      "item": "Driver and version",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "",
+      "skill_that_covers": "documentdb-driver; documentdb-connection; documentdb-local-deployment",
+      "assumption_if_unanswered": "Synchronous PyMongo 4.x, with one module-level MongoClient shared across requests.",
+      "note": "Skills establish PyMongo usage and client reuse, but do not prescribe a version for synchronous Flask. Retry-write guidance conflicts across skills."
+    },
+    {
+      "item": "Target service and tier",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "Azure DocumentDB; product catalog stored in DocumentDB.",
+      "skill_that_covers": "documentdb-vector-search; documentdb-azure-deployment",
+      "assumption_if_unanswered": "Connect to an existing managed Azure DocumentDB cluster through DOCUMENTDB_URI; document M10 as sufficient for a small IVF catalog, without fixing its region, storage, or HA.",
+      "note": "Service identity is clear. Vector guidance gives an M10+ floor for IVF; deployment guidance requires a dev/production choice rather than settling the topology."
+    },
+    {
+      "item": "Authentication and secrets",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "",
+      "skill_that_covers": "documentdb-local-deployment; documentdb-connection; documentdb-security",
+      "assumption_if_unanswered": "Use native SCRAM-SHA-256 credentials in DOCUMENTDB_URI and an OPENAI_API_KEY environment variable; keep .env uncommitted.",
+      "note": "Environment-driven database configuration is covered. Native versus Entra authentication and model credential configuration remain choices."
+    },
+    {
+      "item": "Data model",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "Products have titles, descriptions, and embeddings stored as BSON binary vectors.",
+      "skill_that_covers": "documentdb-data-modeling; documentdb-vector-search",
+      "assumption_if_unanswered": "Use retail.products with one document per product: stable _id, title, description, embedding, embeddingModel, and embeddingDims; no sharding. Encode float32 bytes with bson.binary.Binary, potentially using its default subtype 0.",
+      "note": "Skills cover modeling principles and embedding metadata, not the required binary subtype, encoding, or compatibility with IVF indexing."
+    },
+    {
+      "item": "Sample data",
+      "status": "missing",
+      "blocking": false,
+      "found_in_prompt": "",
+      "skill_that_covers": "documentdb-local-deployment",
+      "assumption_if_unanswered": "Create roughly 20 synthetic retail products in a checked-in JSON file, loaded by an idempotent seed script using stable IDs and upserts; no external dataset licence.",
+      "note": "The local-deployment skill covers version-controlled, idempotent seed scripts, but not this catalog's source, size, or licence."
+    },
+    {
+      "item": "Queries and indexes",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "Create a vector-ivf index; return the top 10 semantically similar products.",
+      "skill_that_covers": "documentdb-vector-search",
+      "assumption_if_unanswered": "Index embedding as cosmosSearch with kind vector-ivf, dimensions 1536, similarity COS, and numLists 1 for the small seed catalog; query with $search/cosmosSearch and k=10, projecting searchScore.",
+      "note": "Skills confirm IVF and query syntax, but do not provide small-catalog numLists sizing or binary-vector indexing instructions. ANN retrieval is shown; exact top-10 recall is not guaranteed by the guidance."
+    },
+    {
+      "item": "AI components",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "Embed product titles and descriptions using text-embedding-ada-002; embed each search query.",
+      "skill_that_covers": "documentdb-vector-search",
+      "assumption_if_unanswered": "Use the OpenAI API with text-embedding-ada-002 and 1536-dimensional output; concatenate title and description into one embedding input during seeding and embed queries synchronously in /search.",
+      "note": "The skill requires dimension consistency but does not establish this model's output dimensions or provider. Its examples use other models; they do not contradict the requested model."
+    },
+    {
+      "item": "App surface",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "/search takes a natural language query and returns the top 10 products.",
+      "skill_that_covers": "",
+      "assumption_if_unanswered": "Expose POST /search accepting JSON {\"query\":\"...\"} and returning a JSON list of up to 10 products with scores; no browser UI.",
+      "note": "HTTP method, input field, response envelope, validation, and failure responses are unspecified."
+    },
+    {
+      "item": "Provisioning and deployment",
+      "status": "ambiguous",
+      "blocking": false,
+      "found_in_prompt": "Build an app with its catalog stored in DocumentDB.",
+      "skill_that_covers": "documentdb-azure-deployment",
+      "assumption_if_unanswered": "Generate application code for an existing cluster and run Flask locally; do not create cloud resources or include cluster IaC unless requested.",
+      "note": "The deployment skill supplies Bicep and confirmation steps if provisioning is requested. The prompt does not establish that provisioning is part of this build."
+    },
+    {
+      "item": "Run and test instructions",
+      "status": "missing",
+      "blocking": false,
+      "found_in_prompt": "",
+      "skill_that_covers": "documentdb-local-deployment",
+      "assumption_if_unanswered": "Document virtualenv setup, pip install -r requirements.txt, environment setup, python seed.py, flask --app app run, and a curl search example; add no required mocked unit-test suite.",
+      "note": "The skill describes container integration testing, not Flask commands or unit tests that run without a live cluster."
+    },
+    {
+      "item": "Definition of done",
+      "status": "specified",
+      "blocking": false,
+      "found_in_prompt": "Flask app, stored products and embeddings, vector-ivf index, and a query endpoint returning 10 similar products.",
+      "skill_that_covers": "",
+      "assumption_if_unanswered": "",
+      "note": "The requested functional outcome is checkable. Gallery-level quality gates are not stated."
+    },
+    {
+      "item": "Constraints and non-goals",
+      "status": "missing",
+      "blocking": false,
+      "found_in_prompt": "",
+      "skill_that_covers": "",
+      "assumption_if_unanswered": "Treat this as a small development demo with no budget cap or compliance requirements; omit chat generation, agents, checkout, and production application authentication.",
+      "note": "No cost, licence, or production-readiness constraints are supplied."
+    },
+    {
+      "item": "Repository conventions",
+      "status": "missing",
+      "blocking": false,
+      "found_in_prompt": "",
+      "skill_that_covers": "documentdb-local-deployment",
+      "assumption_if_unanswered": "Use app.py, seed.py, data/products.json, requirements.txt, .env.example, .gitignore, and a short README; no telemetry or attribution requirements.",
+      "note": "Skills cover .env.example, ignored secrets, and versioned seed/schema files, but not a complete Flask repository layout or README standard."
+    }
+  ],
+  "contradictions": [
+    "Installed connection guidance conflicts: documentdb-azure-deployment says retryable writes are unsupported and sets retryWrites=false, while documentdb-connection says they are supported and recommends retryWrites=true. This needs source verification before choosing the connection configuration."
+  ],
+  "questions_for_author": [
+    "Should embeddings use the OpenAI API or an Azure OpenAI deployment?",
+    "Which BSON binary vector subtype and numeric encoding are required? The loaded vector-search skill does not document this storage representation.",
+    "Should the sample include cluster infrastructure as code, or target an existing cluster only? If provisioning is included, is it dev/test or production, and may the builder create cloud resources?"
+  ],
+  "requirements_at_risk": [
+    "Model credentials from environment variables with none committed: database secrets are covered, but no loaded skill establishes the model credential contract.",
+    "A .env.example listing every setting: the skill supplies database settings, not a complete inventory including model configuration.",
+    "Catalog-sized vector parameters and README guidance for larger catalogs: the skill gives IVF scale guidance but no numLists sizing recipe or required README explanation.",
+    "Clear errors for empty queries and embedding-call failures: neither the prompt nor loaded skills specifies endpoint error handling.",
+    "Pinned dependencies in requirements.txt: no prompt or loaded skill requires Python dependency pinning.",
+    "Unit tests without a live cluster: local guidance covers real-container integration tests, not mocked Flask and embedding tests.",
+    "Cluster infrastructure as code using the Azure DocumentDB resource type: the deployment skill provides the correct implementation, but the prompt does not request provisioning and the builder may omit it.",
+    "README covering purpose, prerequisites, setup, run, and clean-up: neither the prompt nor loaded skills requires this complete documentation set."
+  ]
+}

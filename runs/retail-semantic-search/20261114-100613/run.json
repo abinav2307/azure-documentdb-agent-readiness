@@ -1,0 +1,8 @@
+{
+  "sample": "retail-semantic-search",
+  "exit_code": 3,
+  "verdicts": {
+    "prompt_review": "sufficient_with_assumptions",
+    "readiness": "blocked"
+  }
+}
