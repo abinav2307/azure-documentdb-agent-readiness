@@ -1,0 +1,11 @@
+# Tested with these versions on Python 3.13. Agent Framework needs Python 3.11 or later.
+agent-framework-core>=1.26,<2
+agent-framework-openai>=1.18,<2
+agent-framework-foundry>=1.16,<2
+mcp>=2.3,<3
+tenacity>=9
+azure-identity>=1.27
+pydantic>=2.13,<3
+python-dotenv>=1.2
+pyyaml>=6
+pytest>=9

@@ -1,0 +1,130 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Azure OpenAI resource with key sign-in disabled (Microsoft Entra ID only), one model deployment, and the Cognitive Services OpenAI User role for the person who will run the Samples Factory."
+  },
+  "parameters": {
+    "accountName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 64,
+      "metadata": {
+        "description": "Name of the Azure OpenAI resource. Also becomes the endpoint host name, so it must be globally unique: https://<accountName>.openai.azure.com"
+      },
+      "defaultValue": "abinav-alg-docs-renaissance"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus2",
+      "metadata": {
+        "description": "Region. The model you choose must be offered there."
+      }
+    },
+    "modelName": {
+      "type": "string",
+      "metadata": {
+        "description": "Model to deploy, exactly as listed by: az cognitiveservices model list --location <region>"
+      }
+    },
+    "modelVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Version of that model, from the same list."
+      }
+    },
+    "deploymentName": {
+      "type": "string",
+      "defaultValue": "abinav-alg-docs-renaissance",
+      "metadata": {
+        "description": "Name of the deployment. This is the value for FACTORY_MODEL in .env."
+      }
+    },
+    "deploymentSku": {
+      "type": "string",
+      "defaultValue": "GlobalStandard",
+      "metadata": {
+        "description": "Deployment type. Must be one the model lists as available, for example GlobalStandard, DataZoneStandard or Standard."
+      }
+    },
+    "capacity": {
+      "type": "int",
+      "defaultValue": 1000,
+      "minValue": 1,
+      "metadata": {
+        "description": "Rate limit in thousands of tokens per minute. Lower it if your quota is smaller; the builder stage is heavy, so more is better."
+      }
+    },
+    "principalId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Object ID of the user who will call the model. Get yours with: az ad signed-in-user show --query id -o tsv. Leave empty to skip the role assignment."
+      }
+    }
+  },
+  "variables": {
+    "openAiUserRoleId": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2024-10-01",
+      "name": "[parameters('accountName')]",
+      "location": "[parameters('location')]",
+      "kind": "OpenAI",
+      "sku": {
+        "name": "S0"
+      },
+      "properties": {
+        "customSubDomainName": "[parameters('accountName')]",
+        "disableLocalAuth": true,
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2024-10-01",
+      "name": "[format('{0}/{1}', parameters('accountName'), parameters('deploymentName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+      ],
+      "sku": {
+        "name": "[parameters('deploymentSku')]",
+        "capacity": "[parameters('capacity')]"
+      },
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "[parameters('modelName')]",
+          "version": "[parameters('modelVersion')]"
+        }
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('principalId')))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('accountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), parameters('principalId'), variables('openAiUserRoleId'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('openAiUserRoleId'))]",
+        "principalId": "[parameters('principalId')]",
+        "principalType": "User"
+      }
+    }
+  ],
+  "outputs": {
+    "AZURE_OPENAI_ENDPOINT": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', parameters('accountName')), '2024-10-01').endpoint]"
+    },
+    "FACTORY_MODEL": {
+      "type": "string",
+      "value": "[parameters('deploymentName')]"
+    }
+  }
+}

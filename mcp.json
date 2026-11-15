@@ -1,0 +1,32 @@
+{
+  "_comment": "MCP servers the pipeline may use. ${NAME} is read from the environment or .env. 'required': true makes the readiness gate block when the server does not answer. 'stages' limits which agents get the server's tools. 'documentation': true marks a public documentation search server; the audit warns when none answers.",
+  "servers": {
+    "documentdb": {
+      "purpose": "Azure DocumentDB data-plane tools: queries, aggregation, index management, schema inspection",
+      "required": false,
+      "stages": ["readiness", "build"],
+      "command": "npx",
+      "args": ["-y", "github:microsoft/documentdb-mcp"],
+      "env": {
+        "TRANSPORT": "stdio",
+        "AUTH_REQUIRED": "false",
+        "ALLOW_UNAUTHENTICATED_STDIO": "true",
+        "CONNECTION_PROFILES": "{\"default\":{\"authMode\":\"connectionString\",\"uri\":\"${DOCUMENTDB_URI}\"}}"
+      }
+    },
+    "azure": {
+      "purpose": "Azure MCP Server: control-plane tools across Azure services and best-practice lookups",
+      "required": false,
+      "stages": ["readiness", "build"],
+      "command": "npx",
+      "args": ["-y", "@azure/mcp@latest", "server", "start"]
+    },
+    "learn": {
+      "purpose": "Microsoft Learn documentation search and fetch. The source for checking facts and best practices",
+      "required": false,
+      "stages": ["readiness", "build", "audit"],
+      "documentation": true,
+      "url": "https://learn.microsoft.com/api/mcp"
+    }
+  }
+}

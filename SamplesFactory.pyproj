@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{2087891D-BE84-4DBD-97D9-7230ABD6F5A9}</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>main.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>SamplesFactory</Name>
+    <RootNamespace>SamplesFactory</RootNamespace>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <!-- F5 runs the tool inventory, which needs no model. Change this to e.g.
+         run samples\retail-semantic-search.md
+         under Project > Properties > Debug > Script Arguments. -->
+    <CommandLineArguments>check</CommandLineArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <TestFramework>Pytest</TestFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="factory\__init__.py" />
+    <Compile Include="factory\agents\__init__.py" />
+    <Compile Include="factory\agents\auditor.py" />
+    <Compile Include="factory\agents\builder.py" />
+    <Compile Include="factory\agents\prompt_reviewer.py" />
+    <Compile Include="factory\agents\readiness.py" />
+    <Compile Include="factory\aggregate.py" />
+    <Compile Include="factory\config.py" />
+    <Compile Include="factory\context.py" />
+    <Compile Include="factory\decision_log.py" />
+    <Compile Include="factory\llm.py" />
+    <Compile Include="factory\models.py" />
+    <Compile Include="factory\pipeline.py" />
+    <Compile Include="factory\reports.py" />
+    <Compile Include="factory\tools\__init__.py" />
+    <Compile Include="factory\tools\environment.py" />
+    <Compile Include="factory\tools\mcp_inventory.py" />
+    <Compile Include="factory\tools\shell.py" />
+    <Compile Include="factory\tools\workspace.py" />
+    <Compile Include="main.py" />
+    <Compile Include="tests\__init__.py" />
+    <Compile Include="tests\echo_mcp_server.py" />
+    <Compile Include="tests\fakes.py" />
+    <Compile Include="tests\test_pipeline_offline.py" />
+    <Compile Include="tests\test_units.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="best-practices\" />
+    <Folder Include="factory\" />
+    <Folder Include="factory\agents\" />
+    <Folder Include="factory\tools\" />
+    <Folder Include="prompts\" />
+    <Folder Include="requirements\" />
+    <Folder Include="samples\" />
+    <Folder Include="tests\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".env.example" />
+    <Content Include=".gitignore" />
+    <Content Include="best-practices\checklist.md" />
+    <Content Include="mcp.json" />
+    <Content Include="prompts\auditor.md" />
+    <Content Include="prompts\builder.md" />
+    <Content Include="prompts\confusion_quiz.md" />
+    <Content Include="prompts\known_accelerators.md" />
+    <Content Include="prompts\practice_discovery.md" />
+    <Content Include="prompts\practice_recall.md" />
+    <Content Include="prompts\prompt_reviewer.md" />
+    <Content Include="prompts\readiness_checker.md" />
+    <Content Include="prompts\readiness_cold.md" />
+    <Content Include="prompts\rubric.md" />
+    <Content Include="pytest.ini" />
+    <Content Include="requirements\retail-semantic-search.md" />
+    <Content Include="requirements.txt" />
+    <Content Include="samples\retail-semantic-search.md" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Python has nothing to compile. -->
+  <Target Name="CoreCompile" />
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>
