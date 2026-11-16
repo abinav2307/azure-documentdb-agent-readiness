@@ -9,5 +9,6 @@ Read the starter prompt and the summary of what was built, then list the best pr
 - Give your confidence that it holds for Azure DocumentDB specifically.
 - Cover the areas the app touches, and the general ones: connection handling, authentication and secrets, data modeling, indexing, vector search, queries, retries, provisioning.
 - Do not hedge or leave things out because you are unsure. A belief you hold with low confidence is exactly what the comparison is for.
+- List at most 25, most important first: the practices that would most change how this particular app is built, and the ones you are least sure carry over from another product. Each one will be researched individually, so a focused list is worth more than a long one.
 
 Give ids `K01`, `K02`, and so on.

@@ -1,0 +1,22 @@
+[
+  {"_id":"sku-001","title":"Trail Daypack 20L","description":"Lightweight hiking backpack with breathable straps, rain cover and hydration pocket for day trips.","price":59.99,"currency":"USD","category":"outdoors"},
+  {"_id":"sku-002","title":"Waterproof Hiking Boots","description":"Ankle-support boots with grippy rubber soles for muddy trails and wet mountain walks.","price":119.99,"currency":"USD","category":"outdoors"},
+  {"_id":"sku-003","title":"Compact Camping Tent","description":"Two-person tent with waterproof fly and mesh ventilation for weekend camping.","price":149.99,"currency":"USD","category":"outdoors"},
+  {"_id":"sku-004","title":"Insulated Steel Bottle","description":"Reusable 750 ml drink bottle keeps water cold on hikes and hot tea warm during commutes.","price":24.99,"currency":"USD","category":"outdoors"},
+  {"_id":"sku-005","title":"Rechargeable Headlamp","description":"Hands-free adjustable light for night hiking, campsite cooking and emergency repairs.","price":32.99,"currency":"USD","category":"outdoors"},
+  {"_id":"sku-006","title":"Noise-Canceling Headphones","description":"Wireless over-ear headphones reduce travel and office noise with soft cushions and long battery life.","price":179.99,"currency":"USD","category":"electronics"},
+  {"_id":"sku-007","title":"Portable Bluetooth Speaker","description":"Small splash-resistant speaker for music at picnics, beach trips and outdoor gatherings.","price":49.99,"currency":"USD","category":"electronics"},
+  {"_id":"sku-008","title":"USB-C Travel Charger","description":"Compact dual-port charger powers a phone and laptop from one outlet while traveling.","price":39.99,"currency":"USD","category":"electronics"},
+  {"_id":"sku-009","title":"Ergonomic Wireless Mouse","description":"Comfortable vertical mouse reduces wrist strain during long desk sessions.","price":44.99,"currency":"USD","category":"electronics"},
+  {"_id":"sku-010","title":"Adjustable Laptop Stand","description":"Foldable aluminum riser elevates a laptop screen for better posture and airflow.","price":34.99,"currency":"USD","category":"office"},
+  {"_id":"sku-011","title":"Pour-Over Coffee Kit","description":"Glass carafe and reusable stainless filter make fresh hand-brewed coffee without disposable paper.","price":29.99,"currency":"USD","category":"kitchen"},
+  {"_id":"sku-012","title":"Electric Coffee Grinder","description":"Burr grinder with adjustable settings for espresso, French press and drip coffee.","price":89.99,"currency":"USD","category":"kitchen"},
+  {"_id":"sku-013","title":"Cast Iron Skillet","description":"Durable pre-seasoned pan for searing vegetables, cooking steaks and baking cornbread.","price":39.99,"currency":"USD","category":"kitchen"},
+  {"_id":"sku-014","title":"Glass Food Storage Set","description":"Stackable containers with leak-resistant lids for meal preparation and leftovers.","price":34.99,"currency":"USD","category":"kitchen"},
+  {"_id":"sku-015","title":"Non-Slip Yoga Mat","description":"Cushioned exercise mat with textured grip for yoga, stretching and home workouts.","price":29.99,"currency":"USD","category":"fitness"},
+  {"_id":"sku-016","title":"Resistance Band Set","description":"Five elastic bands with handles and a door anchor for portable strength training.","price":24.99,"currency":"USD","category":"fitness"},
+  {"_id":"sku-017","title":"Breathable Running Shirt","description":"Quick-drying lightweight athletic top wicks sweat during warm-weather runs.","price":22.99,"currency":"USD","category":"fitness"},
+  {"_id":"sku-018","title":"Soft Reading Blanket","description":"Cozy washable fleece throw for relaxing on the sofa with a book on chilly evenings.","price":27.99,"currency":"USD","category":"home"},
+  {"_id":"sku-019","title":"Dimmable Desk Lamp","description":"Adjustable task lamp with warm and cool light settings for studying and reading.","price":39.99,"currency":"USD","category":"home"},
+  {"_id":"sku-020","title":"Indoor Herb Garden Kit","description":"Small pots, seeds and growing guide for cultivating basil, mint and parsley on a sunny windowsill.","price":19.99,"currency":"USD","category":"home"}
+]

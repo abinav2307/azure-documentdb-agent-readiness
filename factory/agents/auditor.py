@@ -65,6 +65,11 @@ async def recall_practices(ctx: RunContext, build: BuildReport) -> PriorBeliefs:
 
 async def discover_practices(ctx: RunContext, beliefs: PriorBeliefs) -> DiscoveredPractices:
     """Open discovery. The checklist is deliberately not passed in."""
+    # Each belief becomes an entry the agent must research and write up, so the list is capped.
+    # The recall step orders beliefs by importance; the rest stay in 05a-prior-beliefs.json.
+    limit = ctx.settings.max_prior_beliefs
+    set_aside = [b.id for b in beliefs.beliefs[limit:]]
+    beliefs = beliefs.model_copy(update={"beliefs": beliefs.beliefs[:limit]})
     app = Workspace(ctx.app_dir, writable=False)
     task = (
         f"{ctx.sample_block()}\n\n"
@@ -103,6 +108,11 @@ async def discover_practices(ctx: RunContext, beliefs: PriorBeliefs) -> Discover
     if dropped:
         notes = (notes + "\n\n" if notes.strip() else "") + (
             "Prior beliefs the discovery step did not classify: " + ", ".join(dropped) + ". See 05a-prior-beliefs.json."
+        )
+    if set_aside:
+        notes = (notes + "\n\n" if notes.strip() else "") + (
+            f"Only the first {limit} prior beliefs were checked against public sources (FACTORY_MAX_PRIOR_BELIEFS). "
+            "Not checked: " + ", ".join(set_aside) + ". See 05a-prior-beliefs.json."
         )
     return found.model_copy(update={"practices": practices, "notes": notes})
 

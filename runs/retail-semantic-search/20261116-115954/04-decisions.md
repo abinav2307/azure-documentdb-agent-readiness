@@ -1,0 +1,164 @@
+# Decision log
+
+| Reason came from | Decisions |
+|---|---|
+| model_default | 7 |
+| tool_result | 6 |
+| readiness_report | 2 |
+| operator | 1 |
+| prompt | 1 |
+| docs | 1 |
+| tool_unavailable | 1 |
+
+`model_default` means the agent had no prompt, skill, doc or tool result to go on. Each one is a candidate prompt or documentation gap.
+
+## D001 (readiness): I approved the build with readiness 'ready_with_gaps'
+
+- **Instead of:** Stop and fix gaps first
+- **Because:** Approved with --yes
+- **Reason came from:** `operator`
+- **When:** 2026-11-16T20:05:59+00:00
+
+## D002 (build): I used the installed DocumentDB skills and Microsoft Learn documentation instead of the unavailable Azure AI best-practices tool.
+
+- **Instead of:** Continue retrying the Azure best-practices tool
+- **Because:** Capability discovery failed twice; stop retrying and ground the implementation in the available first-party guidance.
+- **Reason came from:** `tool_result`
+- **Evidence:** azure_get_azure_bestpractices returned 'Error: Function failed.' on both attempts.
+- **When:** 2026-11-16T20:06:30+00:00
+
+## D002 (build): I chose an API-only Python Flask app with POST /search and no automatic resource provisioning or live writes in this run.
+
+- **Instead of:** Web UI; Automatic Azure provisioning; Live seed/index execution
+- **Because:** The prompt requires Flask and /search; the readiness corrections require an existing cluster and prohibit writes. Scripts will be provided for subsequent user-authorized execution.
+- **Reason came from:** `readiness_report`
+- **Evidence:** guidance_for_builder: 'Start with an API-only Flask app against an existing managed cluster ... This run permits no writes'.
+- **When:** 2026-11-16T20:06:30+00:00
+
+## D004 (build): I chose Python 3.11+ source compatibility, Flask 3.1.2, synchronous PyMongo 4.15.3, OpenAI SDK 2.8.1, and python-dotenv 1.2.1, testing on installed Python 3.14.10.
+
+- **Instead of:** Async PyMongo; Unpinned PyMongo 4.x; OpenAI SDK 1.x; Require only Python 3.11
+- **Because:** Flask and Python are requested; synchronous SDKs keep the example short. Exact direct dependency pins are author defaults chosen for reproducibility and will be installed and tested on the available runtime.
+- **Reason came from:** `model_default`
+- **Evidence:** Review assumes Python 3.11 / Flask 3.x / synchronous PyMongo 4.x; readiness asks to pin versions after validation; python --version returned Python 3.14.10.
+- **When:** 2026-11-16T20:06:39+00:00
+
+## D005 (build): I chose native SCRAM-SHA-256 via the portal-issued DOCUMENTDB_URI and public OpenAI via OPENAI_API_KEY, loaded from environment or a locally user-created ignored .env.
+
+- **Instead of:** Microsoft Entra OIDC; Azure OpenAI deployment; Hard-coded credentials
+- **Because:** The prompt does not select a provider or auth method; the review defaults are the simplest local sample. Production should prefer Entra/managed identity and least-privilege users. No credentials will be generated or copied from MCP.
+- **Reason came from:** `model_default`
+- **Evidence:** Review assumptions: 'native SCRAM-SHA-256 ... DOCUMENTDB_URI ... OPENAI_API_KEY' and 'Use the public OpenAI API'.
+- **When:** 2026-11-16T20:06:44+00:00
+
+## D006 (build): I chose a process-wide thread-safe MongoClient with portal SRV URI, TLS and certificate validation enforced, SCRAM-SHA-256, retryWrites=false, default pool sizing, and a 30-second overall database operation budget.
+
+- **Instead of:** Connection skill port 10255 non-SRV URI; retryWrites=true; Client per request; Custom pool sizing
+- **Because:** Readiness overrides contradictory skill examples with the official vector quickstart. The 30-second operation budget is an author default for a small local synchronous API; pool sizes remain defaults because no concurrency measurements exist.
+- **Reason came from:** `readiness_report`
+- **Evidence:** guidance_for_builder: 'Use one PyMongo MongoClient per process, the portal-issued mongodb+srv URI, TLS, and retryWrites=false'; quickstart-python-select-algorithm confirms false.
+- **When:** 2026-11-16T20:06:51+00:00
+
+## D007 (build): I chose retail.products with one bounded document per product, stable string _id, title, description, USD price, category, schemaVersion, normalized embedding and embedding model/dimension/version metadata, with no shard key or sharding.
+
+- **Instead of:** Separate embedding collection; Sharded catalog; ObjectId identifiers; Multiple models
+- **Because:** The review's small-catalog default needs neither joins nor horizontal partitioning. Colocating bounded product data and vectors follows the data-modeling skill. Price is illustrative JSON numeric data, not checkout accounting.
+- **Reason came from:** `model_default`
+- **Evidence:** Review data model assumption: 'retail ... products ... stable _id ... embedding ... metadata; no collection sharding'; documentdb-data-modeling principle: 'Data that is accessed together should be stored together.'
+- **When:** 2026-11-16T20:06:59+00:00
+
+## D008 (build): I chose text-embedding-ada-002 for both title-plus-description ingestion and query embedding, validating 1536 finite numeric elements and L2-normalizing both paths, with no chat model.
+
+- **Instead of:** text-embedding-3-small; Unnormalized vectors; Chat-based query expansion
+- **Because:** The requested model is fixed; skill guidance requires consistent normalization and metadata. The readiness report establishes 1536 dimensions.
+- **Reason came from:** `prompt`
+- **Evidence:** Prompt: 'Embed product titles and descriptions using text-embedding-ada-002'; readiness: 'with a 1,536-element numeric vector'; documentdb-vector-search/vector-normalize-embeddings.md.
+- **When:** 2026-11-16T20:07:06+00:00
+
+## D009 (build): I chose a single custom embedding_ivf index with embedding:cosmosSearch, kind vector-ivf, dimensions 1536, similarity COS, numLists 1, plus the built-in unique _id index; search uses $search/cosmosSearch k=10 and nProbes=1 with searchScore projection.
+
+- **Instead of:** DiskANN; HNSW; numLists=100; Atlas $vectorSearch; Additional category/text indexes
+- **Because:** IVF is requested and supported on M10+; one list covers all 20 demo vectors. No other index supports a requested query. IVF uses nProbes, not DiskANN lSearch.
+- **Reason came from:** `docs`
+- **Evidence:** https://learn.microsoft.com/azure/documentdb/vector-search: 'small demo ... numLists set to 1'; IVF query uses cosmosSearch and searchScore; nProbes defaults to 1 and cannot exceed numLists.
+- **When:** 2026-11-16T20:07:12+00:00
+
+## D010 (build): I chose 20 synthetic JSON products, non-destructive stable-ID upserts that skip unchanged embeddings, data-before-index ordering, index-definition conflict detection, and a bounded readiness probe requiring 10 scored results.
+
+- **Instead of:** Drop and recreate the catalog; Re-embed on every run; Create IVF before seeding; Fixed sleep treated as readiness
+- **Because:** Idempotent seeding avoids duplicate products and unnecessary embedding costs. The official Python example seeds before indexing and warns index construction can take minutes; a probe checks behavior rather than claiming training rules that documentation does not establish.
+- **Reason came from:** `model_default`
+- **Evidence:** Review sample-data assumption: 'roughly 20 synthetic products ... idempotent seed script'; quickstart-python-vector-search seeds then indexes; readiness notes index training/ordering semantics are not established.
+- **When:** 2026-11-16T20:07:18+00:00
+
+## D011 (build): I chose standard-library unittest offline tests with dependency injection, JSON-only POST requests, a 2000-character query limit, a 16 KiB body limit, generic upstream errors, and a public OpenAI 30-second timeout with no SDK retries.
+
+- **Instead of:** Manual smoke tests only; Live database mutation tests; Unlimited request inputs; Return upstream exception details
+- **Because:** Offline verification is possible without secrets and cannot accidentally write to a cluster. Limits and generic errors are small-demo defaults to constrain spend and avoid secret-bearing exception output; no authentication or UI is added.
+- **Reason came from:** `model_default`
+- **Evidence:** Readiness requires mocked tests until credentials and permissions exist; HTTP error contract and test acceptance criteria are author choices.
+- **When:** 2026-11-16T20:07:27+00:00
+
+## D012 (build): I used the Windows virtual-environment Python path instead of the POSIX path for dependency installation.
+
+- **Instead of:** Global pip installation; Retry .venv/bin/python
+- **Because:** The virtual environment was created, but the POSIX executable is not present; the inventory identifies a Windows runtime.
+- **Reason came from:** `tool_unavailable`
+- **Evidence:** run_command: 'NOT INSTALLED: .venv/bin/python was not found on PATH.' Readiness Git version is windows.4.
+- **When:** 2026-11-16T20:07:54+00:00
+
+## D013 (build): I used an isolated workspace .packages target for dependency verification rather than the runner's pre-populated virtual environment.
+
+- **Instead of:** Change pins to satisfy unrelated agent packages; Ignore dependency conflicts
+- **Because:** The invoked virtual-environment executable resolved to an environment containing unrelated Azure agent packages. Isolating the sample packages avoids mixing those dependencies; the documented user workflow remains a fresh venv.
+- **Reason came from:** `tool_result`
+- **Evidence:** pip reported agent-framework-openai 1.18.2 requires openai>=2.25.0 and azure-ai-projects 2.11.0 requires openai>=3.0.0; sample pins openai==2.8.1.
+- **When:** 2026-11-16T20:09:05+00:00
+
+## D014 (build): I used mocked query/index validation and deferred managed-service acceptance instead of inspecting or changing the unrelated MCP database.
+
+- **Instead of:** Create retail.products using MCP; Run semantic queries against sales_forecast_db; Assume MCP credentials supply application credentials
+- **Because:** Read-only discovery shows only an unrelated database; no chosen retail cluster, URI, OpenAI key, or write permission is supplied. The run prohibits writes, so the sample's index cannot be created or queried live here.
+- **Reason came from:** `tool_result`
+- **Evidence:** documentdb_list_databases returned only sales_forecast_db; readiness: 'No application URI, chosen cluster, database privileges, or network reachability is established' and 'This run permits no writes'.
+- **When:** 2026-11-16T20:12:26+00:00
+
+## D015 (build): I chose to document an illustrative development cluster of M10, 32 GiB per shard, one shard, HA Disabled in eastus2, without deploying it or shipping infrastructure.
+
+- **Instead of:** Production topology; Automatic deployment; Optional Bicep template
+- **Because:** The review's default fits a 20-product IVF demo and keeps this sample focused on its existing-cluster API. Regional capacity and actual cluster configuration must be confirmed by the user; this is not a production recommendation.
+- **Reason came from:** `model_default`
+- **Evidence:** Review target assumption explicitly lists M10, 32 GiB, one shard, HA Disabled, eastus2; deployment skill's dev example matches these settings; resource changes are prohibited.
+- **When:** 2026-11-16T20:12:43+00:00
+
+## D016 (build): I chose to validate cached embeddings without renormalizing them on every seed run, preserving their exact stored values.
+
+- **Instead of:** Renormalize cached vectors and replace every time
+- **Because:** Repeated floating-point normalization can introduce tiny changes and unnecessary writes; stored version-1 vectors are already normalized during creation.
+- **Reason came from:** `model_default`
+- **Evidence:** The idempotent seed design should skip unchanged data; floating-point arithmetic can change bitwise values on repeated normalization.
+- **When:** 2026-11-16T20:12:49+00:00
+
+## D017 (build): I used the file-write tool for the seed correction instead of a quoted Python replacement command.
+
+- **Instead of:** Retry nested command quoting
+- **Because:** The runner's quoting produced a syntax error before editing; direct file writing avoids shell-specific escaping.
+- **Reason came from:** `tool_result`
+- **Evidence:** python -c replacement failed: SyntaxError: unterminated string literal (detected at line 1).
+- **When:** 2026-11-16T20:12:58+00:00
+
+## D018 (build): I used tls=True and explicit false certificate/hostname relaxation flags without tlsInsecure, and added a real offline PyMongo constructor check.
+
+- **Instead of:** Keep redundant TLS flags; Disable certificate validation
+- **Because:** Actual PyMongo rejects tlsInsecure even when false if tlsAllowInvalidHostnames is also specified. The remaining flags enforce validation; a URI containing tlsInsecure will fail rather than relax security.
+- **Reason came from:** `tool_result`
+- **Evidence:** pymongo.errors.InvalidURI: 'URI options tlsInsecure and tlsAllowInvalidHostnames cannot be specified simultaneously.' Constructor used connect=False and made no database operation.
+- **When:** 2026-11-16T20:14:49+00:00
+
+## D019 (build): I used an offline regression test with an in-memory generated throwaway password and username to validate real PyMongo constructor options, instead of repeating the credential-free constructor command.
+
+- **Instead of:** Third retry of the failing constructor command; Use real application credentials
+- **Because:** After removing the incompatible TLS flag, SCRAM validation correctly requires a username. An in-memory throwaway credential allows constructor-only validation without network calls or writing credentials to files.
+- **Reason came from:** `tool_result`
+- **Evidence:** Second constructor probe failed with 'pymongo.errors.ConfigurationError: SCRAM-SHA-256 requires a username'.
+- **When:** 2026-11-16T20:15:35+00:00

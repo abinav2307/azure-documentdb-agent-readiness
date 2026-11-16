@@ -2,6 +2,8 @@
 agent-framework-core>=1.26,<2
 agent-framework-openai>=1.18,<2
 agent-framework-foundry>=1.16,<2
+# agent-framework-openai accepts older openai releases than it can import. 3.0 to 3.51 are tested.
+openai>=3.0,<4
 mcp>=2.3,<3
 tenacity>=9
 azure-identity>=1.27

@@ -45,4 +45,5 @@ For each entry:
 - If the same practice appears in two sources, record it once and prefer the documentation page.
 - List the searches that returned nothing useful in `searches_with_no_useful_result`. An area the app uses with no guidance to be found is itself a finding.
 - Be thorough across areas rather than deep in one. Give ids `P01`, `P02`, and so on.
+- Keep the result compact. Record at most 30 practices from open discovery, the most relevant to this app first, plus one entry per prior belief. Write `practice` as one sentence and `how_found` as the query or skill name only.
 - You are read-only. Change nothing.

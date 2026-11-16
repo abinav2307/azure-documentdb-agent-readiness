@@ -19,7 +19,18 @@ class StageError(RuntimeError):
 
 
 def make_client(settings: Settings, max_iterations: int | None = None) -> Any:
-    """Create a chat client for the configured provider."""
+    """Create a chat client for the configured provider, with the run's timeout applied."""
+    client = _make_client(settings, max_iterations)
+    # The OpenAI SDK's default is 10 minutes per request. A reasoning model writing a long
+    # structured answer in one piece can exceed that, so the limit is raised here.
+    sdk_client = getattr(client, "client", None)
+    if sdk_client is not None and hasattr(sdk_client, "timeout"):
+        sdk_client.timeout = float(settings.request_timeout_seconds)
+        sdk_client.max_retries = settings.request_retries
+    return client
+
+
+def _make_client(settings: Settings, max_iterations: int | None = None) -> Any:
     loop = {"max_iterations": max_iterations or settings.max_iterations}
     if not settings.model:
         raise StageError("FACTORY_MODEL is not set. Copy .env.example to .env and fill it in.")
@@ -70,7 +81,8 @@ def make_client(settings: Settings, max_iterations: int | None = None) -> Any:
         return client_type(
             model=settings.model,
             api_key=settings.openai_api_key,
-            base_url=settings.openai_base_url or None,
+            # Always explicit, so an empty OPENAI_BASE_URL in the environment cannot leak in.
+            base_url=settings.openai_base_url or "https://api.openai.com/v1",
             function_invocation_configuration=loop,
         )
 

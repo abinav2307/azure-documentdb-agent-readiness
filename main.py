@@ -40,6 +40,13 @@ def main(argv: list[str] | None = None) -> int:
     agg.add_argument("--runs", type=Path, help="Runs folder (default: ./runs).")
 
     args = parser.parse_args(argv)
+    # Quiet two harmless but repetitive messages from the framework's MCP client. Tool failures
+    # are still reported, and every tool call is recorded in events.jsonl.
+    import logging
+    import warnings
+
+    logging.getLogger("agent_framework._mcp").setLevel(logging.ERROR)
+    warnings.filterwarnings("ignore", message=".*ping is removed.*")
     for stream in (sys.stdout, sys.stderr):  # model text may hold characters a Windows console cannot print
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(errors="replace")
@@ -87,6 +94,23 @@ def main(argv: list[str] | None = None) -> int:
     except StageError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)
         return 1
+    except Exception as exc:
+        # A model or network failure in the middle of a run. Finished stages are already saved.
+        from agent_framework.exceptions import ChatClientException
+
+        if not isinstance(exc, ChatClientException):
+            raise
+        from factory import pipeline
+
+        reason = str(exc.args[0]) if exc.args else str(exc)
+        print(f"\nERROR: the model call failed: {reason.split('service failed to complete the prompt: ')[-1]}", file=sys.stderr)
+        if "timed out" in reason.lower():
+            print("       The model took longer than FACTORY_REQUEST_TIMEOUT seconds to answer. Raise it in .env, "
+                  "or lower FACTORY_MAX_PRIOR_BELIEFS if this was the audit.", file=sys.stderr)
+        if pipeline.LAST_RUN_DIR:
+            print(f"       Finished stages are saved. Continue with:\n       python main.py run --resume \"{pipeline.LAST_RUN_DIR}\" --yes",
+                  file=sys.stderr)
+        return 7
 
 
 async def _check(settings: Settings) -> int:

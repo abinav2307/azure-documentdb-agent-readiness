@@ -1,0 +1,104 @@
+{
+  "answers": [
+    {
+      "question_id": "Q01",
+      "answer": "Use the Azure resource provider Microsoft.DocumentDB and resource type Microsoft.DocumentDB/mongoClusters.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q02",
+      "answer": "Use az cosmosdb mongocluster create and the az cosmosdb mongocluster command group. Install the cosmosdb-preview extension with az extension add --name cosmosdb-preview; I would treat this as extension functionality rather than a core CLI command group.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q03",
+      "answer": "In Bicep, use Microsoft.DocumentDB/mongoClusters, for example resource cluster 'Microsoft.DocumentDB/mongoClusters@2024-07-01' = { ... }. In Terraform, use azurerm_mongo_cluster.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q04",
+      "answer": "Use mongodb+srv://<user>:<URL-encoded-password>@<cluster>.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256&retrywrites=false&maxIdleTimeMS=120000. The SRV connection discovers the host and port; the service port is 10260. Require TLS and disable retryable writes.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q05",
+      "answer": "Provision compute tiers with vCores, memory, storage, and a shard count, with optional high availability. Budget for provisioned compute and storage, not Cosmos DB request units. I would choose an M-series cluster tier rather than an RU/s or serverless-RU setting.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q06",
+      "answer": "Use native username/password authentication with SCRAM-SHA-256, or Microsoft Entra ID authentication with a configured database principal. For Entra ID, use a MongoDB driver supporting MONGODB-OIDC, authSource=$external, and an OIDC callback that supplies an Azure Identity access token. I would request the token for https://ossrdbms-aad.database.windows.net/.default and use that token through the driver's OIDC flow, not as a SCRAM password.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q07",
+      "answer": "Use standard MongoDB drivers: PyMongo for Python, the mongodb package for Node.js, or the MongoDB driver for the application's language. There is no separate DocumentDB data-plane SDK required, and I would not use the Azure Cosmos DB NoSQL SDK.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q08",
+      "answer": "The vector index types are vector-ivf, vector-hnsw, and vector-diskann. For IVF, run db.runCommand({createIndexes:'products',indexes:[{name:'embedding_ivf',key:{embedding:'cosmosSearch'},cosmosSearchOptions:{kind:'vector-ivf',numLists:100,similarity:'COS',dimensions:1536}}]}). HNSW and DiskANN use their respective kind values and algorithm-specific options.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q09",
+      "answer": "Create a MongoDB text index, for example db.products.createIndex({title:'text',description:'text'}), and query it with {$text:{$search:query}}; expose relevance with {$meta:'textScore'}. For hybrid search, run this lexical query and a vector $search/cosmosSearch query, then combine their ranked results with reciprocal rank fusion in application code. I would not assume Atlas Search's $search.text or Atlas vectorSearch syntax.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q10",
+      "answer": "I would provision MongoDB compatibility version 7.0; the service also offers 5.0 and 6.0 compatibility. This is MongoDB wire-protocol compatibility, not a stock mongod installation or a promise of every feature in those releases. I would avoid server-side JavaScript such as $where and mapReduce, cross-shard transactions, Atlas-specific search APIs, and replica-set administration commands.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q11",
+      "answer": "Use the open-source DocumentDB local container: docker run --rm -p 10260:10260 ghcr.io/microsoft/documentdb/documentdb-local:latest. Connect using a MongoDB driver on localhost:10260. This is not the Azure Cosmos DB NoSQL emulator, and I would not use its HTTPS port 8081 for MongoDB application traffic.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q12",
+      "answer": "Change streams are supported, but I would first enable the cluster's ChangeStreams preview feature before using collection.watch() or the $changeStream aggregation stage. I would explicitly configure this rather than assume change streams are enabled on every cluster.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q13",
+      "answer": "Use the dedicated DocumentDB MCP Server from microsoft/documentdb-mcp for MongoDB data-plane tools. I would not rely on the general Azure MCP Server to query collections or run DocumentDB aggregations; its Azure resource-management coverage is not a replacement for the dedicated server.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q14",
+      "answer": "Azure DocumentDB was previously Azure Cosmos DB for MongoDB vCore. It is distinct from the RU-based Azure Cosmos DB for MongoDB offering. Azure DocumentDB is the managed Azure service built on the open-source DocumentDB project; it is not Amazon DocumentDB.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q15",
+      "answer": "The engine is PostgreSQL-based, using the open-source DocumentDB extensions and a MongoDB-compatible gateway. Application code still uses MongoDB drivers, BSON documents, and MongoDB query/aggregation syntax; I would not connect with psycopg or write PostgreSQL SQL for this Flask app.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S01",
+      "answer": "Use PyMongo MongoClient with the Azure DocumentDB SRV URI, TLS enabled, SCRAM-SHA-256 authentication, and retryWrites=false. Store products in a products collection with title, description, and embedding fields.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S02",
+      "answer": "text-embedding-ada-002 produces 1536-dimensional embeddings. Embed the concatenated product title and description and store the result as a numeric array in embedding; embed search queries with the same model.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S03",
+      "answer": "Create the requested DocumentDB IVF index with db.command({'createIndexes':'products','indexes':[{'name':'embedding_ivf','key':{'embedding':'cosmosSearch'},'cosmosSearchOptions':{'kind':'vector-ivf','numLists':100,'similarity':'COS','dimensions':1536}}]}). The index key is cosmosSearch, not an Atlas vectorSearch index definition.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S04",
+      "answer": "Retrieve the top ten products with products.aggregate([{'$search':{'cosmosSearch':{'vector':query_embedding,'path':'embedding','k':10},'returnStoredSource':True}},{'$project':{'title':1,'description':1,'score':{'$meta':'searchScore'}}}]). Use the DocumentDB cosmosSearch operator rather than Atlas's $vectorSearch stage.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S05",
+      "answer": "For IVF, populate the product collection with its embeddings before creating the index so the index can establish useful clusters. Build /search as a Flask POST endpoint accepting {'query':'...'}, obtain the query embedding, execute the vector aggregation, and serialize MongoDB ObjectId values to strings in the JSON response.",
+      "confidence": "medium"
+    }
+  ]
+}

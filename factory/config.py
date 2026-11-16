@@ -41,11 +41,21 @@ class Settings:
     allow_azure_writes: bool = False
     command_timeout_seconds: int = 600
     builder_max_iterations: int = 150
+    request_timeout_seconds: int = 1800     # one model call; large structured answers can take many minutes
+    request_retries: int = 2
+    max_prior_beliefs: int = 25             # prior beliefs carried into practice discovery
     max_iterations: int = 40
 
     @classmethod
     def load(cls, env_file: Path | None = None) -> "Settings":
         load_dotenv(env_file or PROJECT_DIR / ".env")
+        # A line such as `OPENAI_BASE_URL=` puts an EMPTY variable in the environment. The OpenAI
+        # and Azure SDKs read these variables themselves and treat empty as a real value (an empty
+        # base address, for example), so blank settings are removed and count as not set.
+        for name in ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_ORG_ID", "AZURE_OPENAI_ENDPOINT",
+                     "AZURE_OPENAI_API_KEY", "FOUNDRY_PROJECT_ENDPOINT", "DOCUMENTDB_URI"):
+            if name in os.environ and not os.environ[name].strip():
+                del os.environ[name]
         env = os.environ.get
         # `npx skills add Azure/documentdb-agent-kit`, run from this folder,
         # installs into .agents/skills. Home-folder skill directories are left
@@ -72,6 +82,9 @@ class Settings:
             allow_azure_writes=env("FACTORY_ALLOW_AZURE_WRITES", "false").lower() in ("1", "true", "yes"),
             command_timeout_seconds=int(env("FACTORY_COMMAND_TIMEOUT", "600")),
             builder_max_iterations=int(env("FACTORY_BUILDER_MAX_ITERATIONS", "150")),
+            request_timeout_seconds=int(env("FACTORY_REQUEST_TIMEOUT", "1800")),
+            request_retries=int(env("FACTORY_REQUEST_RETRIES", "2")),
+            max_prior_beliefs=int(env("FACTORY_MAX_PRIOR_BELIEFS", "25")),
             max_iterations=int(env("FACTORY_MAX_ITERATIONS", "40")),
         )
 

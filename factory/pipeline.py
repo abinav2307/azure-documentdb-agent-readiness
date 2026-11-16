@@ -44,6 +44,9 @@ EXIT_NOT_APPROVED = 5
 EXIT_BUILD_FAILED = 6
 
 
+LAST_RUN_DIR: Path | None = None  # so main.py can print a resume command after a failure
+
+
 def say(message: str) -> None:
     print(message, flush=True)
 
@@ -90,6 +93,8 @@ async def run_pipeline(
 ) -> int:
     sample_name = resume_dir.parent.name if resume_dir else prompt_path.stem
     run_dir = resume_dir or new_run_dir(settings, sample_name)
+    global LAST_RUN_DIR
+    LAST_RUN_DIR = run_dir
     if not resume_dir:
         (run_dir / "prompt.md").write_text(prompt_path.read_text(encoding="utf-8"), encoding="utf-8")
     if requirements_path and requirements_path.exists():

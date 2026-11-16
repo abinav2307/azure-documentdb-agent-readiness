@@ -1,0 +1,1155 @@
+{
+  "verdict": "pass_with_findings",
+  "summary": "The Flask, ada-002, native IVF and top-10 search implementation is present, with environment-backed secrets, reusable clients, idempotent seeding, scored results and offline tests. The trace confirms successful offline verification, not managed-service acceptance. Before publishing, add bounded transient-fault handling and batched seeding, supply optional cluster infrastructure, and resolve the reference requirement for BSON binary vectors against the documented numeric-array examples. Of the nine requirements predicted at risk, binary storage and infrastructure were missed; the other seven were delivered. The literal prohibition on mentioning neighbouring names was also not met, although the README correctly distinguishes the services rather than confusing them. Documentation search was reachable. Important product-team findings are conflicting connection/retry guidance, incomplete vector-encoding guidance, missing gallery-wide acceptance rules, and guidance found only through targeted searches. The 19 decision records contain two different decisions named D002 and no D003.",
+  "requirement_results": [
+    {
+      "requirement": "The app is a Python Flask app.",
+      "status": "met",
+      "evidence": "app/app.py:2,10-11,43 creates and exports a Flask application.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Products are stored in an Azure DocumentDB collection.",
+      "status": "met",
+      "evidence": "app/catalog.py:38-48,65-69 connects using the managed SRV URI and selects products; app/seed.py:44-49 persists product documents. Actual ingestion was not executed.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Product titles and descriptions are embedded with text-embedding-ada-002.",
+      "status": "met",
+      "evidence": "app/catalog.py:12,84-90 fixes the model and combines title and description; app/seed.py:29,43 embeds that text.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Embeddings are stored as BSON binary vectors.",
+      "status": "not_met",
+      "evidence": "app/catalog.py:81 returns ordinary float lists; app/seed.py:44 stores those lists directly. No BSON Binary vector conversion exists.",
+      "cause": "skill_silent",
+      "smallest_fix": "Add a vector-skill rule defining the service-supported BSON representation, subtype and driver conversion. Do not require binary storage until its IVF support is documented and tested; otherwise change the reference requirement to supported numeric arrays."
+    },
+    {
+      "requirement": "A vector-ivf index exists on the embedding field.",
+      "status": "not_checkable",
+      "evidence": "app/catalog.py:16-19,110-124 defines and creates the correct index; app/seed.py:76 invokes creation. app/README.md:95 explicitly says live creation was not verified.",
+      "cause": "tool_unavailable",
+      "smallest_fix": "Supply an authorized disposable application cluster and acceptance runner with permission to seed, create the index and inspect its definition."
+    },
+    {
+      "requirement": "/search takes a natural language query, embeds it, and returns the 10 most similar products.",
+      "status": "met",
+      "evidence": "app/app.py:19-38 validates and embeds query text; app/catalog.py:93-107 requests k=10 through native cosmosSearch. app/seed.py:57-66 checks ten scored hits. Live relevance remains unverified.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "The connection string and model credentials come from environment variables; none appear in the repository.",
+      "status": "met",
+      "evidence": "app/catalog.py:25-29,37-49 reads DOCUMENTDB_URI and OPENAI_API_KEY; app/.env.example:3-4 contains placeholders. Tests use invalid or generated throwaway credentials, not application secrets.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "A .env.example lists every setting with placeholder values.",
+      "status": "met",
+      "evidence": "app/.env.example:3-6 lists both required secrets and the optional database setting. retail is the documented nonsecret sample default; app/catalog.py:38-39,67 uses exactly these application settings.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "The vector index dimensions match the embedding model's output.",
+      "status": "met",
+      "evidence": "app/catalog.py:12-18 uses ada-002 with dimensions=1536; lines 72-86 validate every generated vector.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "The vector index parameters are chosen for the catalog size, and the README says how to change them for a larger one.",
+      "status": "met",
+      "evidence": "app/catalog.py:18,96 uses numLists=1 and nProbes=1; app/data/products.json:2-21 contains 20 products; app/README.md:99-100 explains growth tuning.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "One database client is created and reused across requests.",
+      "status": "met",
+      "evidence": "app/catalog.py:20-22,32-51 implements a locked process-wide singleton; app/tests/test_sample.py:157-173 checks reuse.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "A seed script loads sample products and creates the index, and can be run twice without duplicating data.",
+      "status": "met",
+      "evidence": "app/seed.py:17-54,73-77 loads stable IDs, performs replace_one upserts and creates the index; app/tests/test_sample.py:132-145 checks repeated seeding.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "/search returns a clear error for an empty query and when the embedding call fails.",
+      "status": "met",
+      "evidence": "app/app.py:27-37 returns 400 for empty input and generic 503 errors for OpenAI/configuration failures. The offline suite does not specifically inject an OpenAIError.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Search results include the similarity score.",
+      "status": "met",
+      "evidence": "app/catalog.py:98-102 projects score using $meta: searchScore; app/app.py:38 returns it.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Dependencies are pinned in requirements.txt.",
+      "status": "met",
+      "evidence": "app/requirements.txt:1-4 pins all four direct dependencies.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Unit tests run without a live cluster.",
+      "status": "met",
+      "evidence": "app/tests/test_sample.py:16-28,41-173 uses fakes and mocks; app/tests/test_driver_options.py:11-20 uses connect=False. events.jsonl:114 records a successful final offline test run.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Infrastructure for the cluster is provided as code, using the Azure DocumentDB resource type.",
+      "status": "not_met",
+      "evidence": "No infrastructure files were supplied; app/README.md:14,24 explicitly excludes resource deployment. D015 deliberately omitted even an optional template.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Add a gallery-sample rule: ship optional parameterized Microsoft.DocumentDB/mongoClusters infrastructure even when the app consumes an existing cluster; generating files does not authorize deployment."
+    },
+    {
+      "requirement": "The README covers what the sample shows, prerequisites, setup, run, and clean-up.",
+      "status": "met",
+      "evidence": "app/README.md:1-14,16-45,47-80,106-108 covers all five sections.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "The sample uses the name Azure DocumentDB throughout, and no former or neighbouring product name.",
+      "status": "partly_met",
+      "evidence": "app/README.md:1-5 names the target correctly, but line 5 explicitly mentions Amazon DocumentDB and Azure Cosmos DB for MongoDB (RU) to disambiguate it. Native cosmosSearch identifiers are required API names, not incorrect branding.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Define the naming rule as: name the target Azure DocumentDB; permit explicit disambiguation and required legacy API identifiers. If the literal ban is intentional, state it in the gallery-sample skill."
+    }
+  ],
+  "checks": [
+    {
+      "practice": "One client is created and reused for the life of the process.",
+      "category": "Connection",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P23",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/persist-agent-state#get-started-install-dependencies",
+      "status": "followed",
+      "evidence": "app/catalog.py:20-22,32-51; app/tests/test_sample.py:157-173.",
+      "source": "Use LangGraph with Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Connection settings follow the service's recommendation for the chosen driver.",
+      "category": "Connection",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P27",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "status": "followed",
+      "evidence": "app/catalog.py:40-48 enforces SRV, validated TLS, SCRAM and retryWrites=False; D006 discloses the 30-second operation budget and resolves conflicting examples for this vector scenario.",
+      "source": "Quickstart: Vector index with Python in Azure DocumentDB; documentdb-connection",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "The driver version is pinned and is one the service supports.",
+      "category": "Connection",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/requirements.txt:2 pins PyMongo 4.15.3; events.jsonl:106,114 confirms offline import and constructor tests, not live compatibility.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB supported/pinned PyMongo versions and loaded documentdb-driver. The compatibility page accepts wire-protocol drivers and the quickstart gives minimum versions, but no exact-version validation matrix or pinning recommendation was found.",
+      "fix": ""
+    },
+    {
+      "practice": "No password, key or full connection string appears in source, config, tests or README.",
+      "category": "Authentication and secrets",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P32",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-python-vector-search#create-utility-functions",
+      "status": "followed",
+      "evidence": "app/catalog.py:38-49; app/.env.example:3-4; app/tests/test_sample.py:158 uses an invalid test URI; app/tests/test_driver_options.py:13 generates a throwaway password. No real application credentials were observed.",
+      "source": "Quickstart: Use vector search with Python in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Use requested authentication; use Microsoft Entra ID when available or state why not.",
+      "category": "Authentication and secrets",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P16",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/security#transport-security",
+      "status": "followed",
+      "evidence": "The prompt specifies no authentication method. D005 states the simplest local-sample rationale; app/README.md:14,20,60 describes SCRAM and the production Entra alternative.",
+      "source": "Secure your Azure DocumentDB cluster",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "A .env.example lists every required setting with placeholder values.",
+      "category": "Authentication and secrets",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/mcp-toolkit#configuration-reference",
+      "status": "followed",
+      "evidence": "app/.env.example:3-6 lists the settings consumed at app/catalog.py:38-39,67; secret values are placeholders.",
+      "source": "Azure DocumentDB MCP Toolkit configuration reference; local-env-driven-config",
+      "searched": "Targeted searches for .env.example, every required setting and configuration inventory; loaded local-env-driven-config. The complete-inventory precedent is on the MCP page rather than the Flask/vector guidance.",
+      "fix": ""
+    },
+    {
+      "practice": "Document shapes match demonstrated access patterns.",
+      "category": "Data model",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P37",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search#how-does-a-vector-store-work",
+      "status": "followed",
+      "evidence": "app/seed.py:44-46 colocates product fields and vectors; app/catalog.py:98-102 returns display data without a second lookup.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Documents cannot grow without bound; no unbounded arrays.",
+      "category": "Data model",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md",
+      "status": "followed",
+      "evidence": "app/data/products.json:2-21 has fixed scalar product fields; app/catalog.py:73-81 fixes vector length; app/seed.py:44-49 replaces documents rather than appending arrays.",
+      "source": "documentdb-data-modeling: model-embed-vs-reference",
+      "searched": "Searched bounded/unbounded Azure DocumentDB arrays and loaded model-embed-vs-reference, which explicitly says to reference unbounded children.",
+      "fix": ""
+    },
+    {
+      "practice": "If sharded, explain the shard key choice.",
+      "category": "Data model",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_applicable",
+      "evidence": "app/README.md:10 explicitly states the catalog is unsharded.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB shard-key explanation and data-modeling/sharding guidance. Found selection recommendations, not a requirement that gallery samples document the rationale.",
+      "fix": ""
+    },
+    {
+      "practice": "Every app query pattern is served by an index, and no index is unused.",
+      "category": "Indexing and queries",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P10",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-create-indexes#queryable-fields-should-always-have-indexes-created",
+      "status": "followed",
+      "evidence": "app/seed.py:31,49 uses _id point operations; app/catalog.py:93-107,120-124 pairs semantic retrieval with the embedding index. No unrelated indexes are created.",
+      "source": "Indexing Best Practices in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Vector index type and parameters suit data size, and dimensions match the model.",
+      "category": "Indexing and queries",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P44",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/tutorial-ai-advertisement-generation",
+      "status": "followed",
+      "evidence": "app/catalog.py:12-19,96 uses ada-002, 1536 dimensions and one IVF list/probe for 20 products; app/README.md:99-100 explains scaling.",
+      "source": "Tutorial: Generate AI advertisements with Azure DocumentDB and Azure OpenAI; Integrated vector store",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Full-text or hybrid search uses the supported mechanism.",
+      "category": "Indexing and queries",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/full-text-search-overview",
+      "status": "not_applicable",
+      "evidence": "app/README.md:14 excludes lexical/hybrid search; app/catalog.py:93-103 is vector-only.",
+      "source": "Full-text search in Azure DocumentDB",
+      "searched": "Searched supported Azure DocumentDB full-text/hybrid mechanisms and fetched the overview. It prescribes createSearchIndexes and BM25, not the indexing skill's textSearch key.",
+      "fix": ""
+    },
+    {
+      "practice": "Aggregation pipelines use only supported stages and operators.",
+      "category": "Indexing and queries",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language",
+      "status": "followed",
+      "evidence": "app/catalog.py:93-103 uses documented $search/cosmosSearch, $project and $meta: searchScore.",
+      "source": "MongoDB Query Language compatibility in Azure DocumentDB; Integrated vector store",
+      "searched": "Searched supported aggregation stages/operators and fetched the compatibility matrix and vector page.",
+      "fix": ""
+    },
+    {
+      "practice": "Transient failures are retried as the service recommends.",
+      "category": "Reliability",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P19",
+      "source_url": "https://learn.microsoft.com/azure/reliability/reliability-documentdb#resilience-to-transient-faults",
+      "status": "violated",
+      "evidence": "app/app.py:30-37 immediately returns 503; app/seed.py:25-54,80-82 aborts on database errors. No bounded exponential-backoff wrapper exists; retryWrites is disabled.",
+      "source": "Reliability in Azure DocumentDB",
+      "searched": "",
+      "fix": "Retry documented transient database failures with bounded exponential backoff within the operation deadline. Preserve retryWrites=False for this vector sample and retry only safely idempotent seed operations; test eventual success and exhaustion."
+    },
+    {
+      "practice": "Bulk loads are batched.",
+      "category": "Reliability",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "status": "violated",
+      "evidence": "app/seed.py:28-49 performs separate reads and writes for every product; no batch operation exists.",
+      "source": "Quickstart: Vector index with Python in Azure DocumentDB, insert_data",
+      "searched": "Searched Azure DocumentDB bulk loads, bulk_write and batch limits; fetched the Python quickstart's bounded bulk-write example.",
+      "fix": "Collect changed stable-ID replacement operations into bounded collection.bulk_write batches, retaining cached embeddings and idempotency. Respect service batch-count and payload limits."
+    },
+    {
+      "practice": "Infrastructure is code using the service's own resource type.",
+      "category": "Provisioning",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep",
+      "status": "violated",
+      "evidence": "D015 and app/README.md:24 explicitly omit infrastructure. The README identifies Microsoft.DocumentDB/mongoClusters correctly but supplies no template.",
+      "source": "Quickstart: Deploy an Azure DocumentDB cluster using Bicep",
+      "searched": "Searched resource-type-specific Bicep and loaded the deployment skill and canonical template.",
+      "fix": "Ship optional parameterized cluster infrastructure and safe deployment/teardown instructions without executing them automatically."
+    },
+    {
+      "practice": "Tier, storage and region are parameters with low-cost defaults.",
+      "category": "Provisioning",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "violated",
+      "evidence": "app/README.md:19 lists illustrative M10/32 GiB/eastus2 values, but there is no infrastructure or parameter file.",
+      "source": "documentdb-azure-deployment: Step 0.5 and references/bicep-cluster-template.md",
+      "searched": "Loaded deployment guidance and its parameterized template. The installed skill supplies tier/storage/location parameters and dev overrides; Learn quickstarts provide low-cost examples but hard-code tier/storage. No exact public skill URL was returned by the available tools.",
+      "fix": "Add tier, storage and location parameters with explicit development defaults and no hard-coded production-region assumption."
+    },
+    {
+      "practice": "Clean-up steps are provided.",
+      "category": "Provisioning",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "status": "followed",
+      "evidence": "app/README.md:106-108 explains dedicated database/collection deletion, local-secret cleanup and optional dedicated-cluster deletion.",
+      "source": "Quickstart: Vector index with Python in Azure DocumentDB, Clean up resources",
+      "searched": "Targeted cleanup searches and fetched Python/Bicep quickstarts.",
+      "fix": ""
+    },
+    {
+      "practice": "README states demonstration, prerequisites, setup, run and cleanup.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/README.md:1-14,16-45,47-80,106-108.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB sample README guidelines and prerequisite/setup/run/cleanup requirements; loaded local/deployment skills. Found example sections, not a complete gallery README rule.",
+      "fix": ""
+    },
+    {
+      "practice": "The sample runs with the README commands.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/README.md:30-36,51-69 provides plausible commands; events.jsonl:106,113-114 verifies imports, compilation and offline tests, not seed or endpoint execution.",
+      "source": "checklist only",
+      "searched": "Searched sample command-verification guidance and inspected build commands. No live application credentials or authorized target was supplied, and no complete README-command acceptance run was recorded.",
+      "fix": ""
+    },
+    {
+      "practice": "Tests exist and pass without live cloud resources, or their prerequisites are documented.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/tests/test_sample.py:16-173; app/tests/test_driver_options.py:9-20; app/README.md:82-95; events.jsonl:114 records successful offline tests.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB offline/cloud-free sample-test requirements and loaded local-prod-parity. It covers container integration tests, not this gallery acceptance rule.",
+      "fix": ""
+    },
+    {
+      "practice": "Dependencies are pinned.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/requirements.txt:1-4 pins direct dependencies; app/README.md:18 explicitly says transitives are not locked.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB dependency-pinning/sample policy and loaded driver/local/vector skills. Some tutorials pin individual packages, but no recommendation to pin all sample dependencies was found.",
+      "fix": ""
+    },
+    {
+      "practice": "Name the service correctly; do not call it a former or neighbouring product.",
+      "category": "Sample hygiene",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/overview#naming-and-history",
+      "status": "followed",
+      "evidence": "app/README.md:1-5 correctly names Azure DocumentDB and explicitly excludes neighbouring services. This satisfies correct naming, unlike the reference file's stricter literal ban on mentioning them.",
+      "source": "What is Azure DocumentDB?, Naming and history",
+      "searched": "Targeted Azure DocumentDB naming/history search.",
+      "fix": ""
+    },
+    {
+      "practice": "Create IVF with createIndexes, an embedding cosmosSearch key and vector-ivf kind.",
+      "category": "vector indexing",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P01",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search#example-using-an-ivf-index",
+      "status": "followed",
+      "evidence": "app/catalog.py:16-19,120-124.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Retrieve through $search/cosmosSearch with indexed path, query vector and k=10.",
+      "category": "vector queries",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P02",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search#example-using-an-ivf-index",
+      "status": "followed",
+      "evidence": "app/catalog.py:93-107.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Project similarity with $meta: searchScore.",
+      "category": "vector queries",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P03",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search#example-using-an-ivf-index",
+      "status": "followed",
+      "evidence": "app/catalog.py:101.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Use numLists=1 for a tiny demonstration and document catalog-growth tuning.",
+      "category": "vector tuning",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P04",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search#example-using-an-ivf-index",
+      "status": "followed",
+      "evidence": "app/catalog.py:18; app/README.md:99-100.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Tune nProbes against recall/latency and keep it no greater than numLists.",
+      "category": "vector tuning",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P05",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search#example-using-an-ivf-index",
+      "status": "followed",
+      "evidence": "app/catalog.py:18,96 uses one list/probe; app/README.md:100 instructs measurement and bounds. No tuning is necessary for the single-list demo.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Use IVF on M10+ for demonstrations; prefer DiskANN on M30+ for production.",
+      "category": "vector indexing and sizing",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P06",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "status": "followed",
+      "evidence": "app/README.md:19 requires M10+; lines 99-100 distinguish the tiny IVF sample from larger workloads.",
+      "source": "Quickstart: Vector index with Python in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Use a bounded representative-search readiness loop after vector-index construction.",
+      "category": "vector index lifecycle",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P07",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "status": "followed",
+      "evidence": "app/seed.py:57-66,76-78 checks ten finite scored hits; app/README.md:58 notes query errors require rerunning.",
+      "source": "Quickstart: Vector index with Python in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Keep one vector index per path; explicitly replace it when changing algorithms.",
+      "category": "vector index lifecycle",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P08",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "followed",
+      "evidence": "app/catalog.py:110-124 reuses a matching index and refuses a conflicting one. It does not silently create or drop an alternative index.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Normalize COS text embeddings at ingestion.",
+      "category": "embedding generation",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P09",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md",
+      "status": "followed",
+      "evidence": "app/catalog.py:72-86; app/seed.py:43.",
+      "source": "documentdb-vector-search",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Create indexes after the initial bulk data load.",
+      "category": "seeding and indexing",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P11",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-create-indexes#queryable-fields-should-always-have-indexes-created",
+      "status": "followed",
+      "evidence": "app/seed.py:75-76 loads products before first index creation.",
+      "source": "Indexing Best Practices in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Review explain output for important queries.",
+      "category": "query optimization",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P12",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/faq#how-do-i-scale-performance-in-azure-documentdb",
+      "status": "violated",
+      "evidence": "app/catalog.py:106-107 only executes the aggregation; app/README.md:82-104 provides result smoke checks but no explain workflow. Build events record no explain operation for this catalog.",
+      "source": "Frequently asked questions about Azure DocumentDB",
+      "searched": "",
+      "fix": "Add a user-authorized query-plan diagnostic command or README procedure and document expected index use. Do not replace live plan evidence with mocked assertions."
+    },
+    {
+      "practice": "Include schemaVersion in product documents.",
+      "category": "data modeling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P13",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md",
+      "status": "followed",
+      "evidence": "app/seed.py:44.",
+      "source": "documentdb-data-modeling",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Keep product BSON documents below 16 MB.",
+      "category": "data modeling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P14",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/max-document-size",
+      "status": "followed",
+      "evidence": "app/data/products.json:2-21 has small fixed product strings; app/catalog.py:73 fixes vectors at 1536 elements; app/seed.py:44-46 adds only bounded metadata.",
+      "source": "Document size and batch write limits in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Leave small catalogs unsharded unless single-shard capacity is exceeded.",
+      "category": "sharding",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P15",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/partitioning#best-practices-for-sharding-data",
+      "status": "followed",
+      "evidence": "app/README.md:10; app/seed.py:73-77 issues no sharding command for the 20-product catalog.",
+      "source": "Sharding for horizontal scalability in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Export diagnostic logs on eligible cluster tiers.",
+      "category": "observability",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P17",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-monitor-diagnostics-logs",
+      "status": "not_assessable",
+      "evidence": "app/README.md:19 allows any M10+ existing cluster; its actual tier and diagnostic settings are unknown. No cluster configuration is supplied.",
+      "source": "Monitor Azure DocumentDB diagnostics logs with Azure Monitor",
+      "searched": "Inspected README, app and build trace for target tier and diagnostic settings. The M10 illustration is not evidence of the user's actual cluster or log eligibility.",
+      "fix": ""
+    },
+    {
+      "practice": "Provide workload-appropriate resource-saturation alerts.",
+      "category": "observability",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P18",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/monitoring/SKILL.md",
+      "status": "violated",
+      "evidence": "app/README.md:60 only suggests adding monitoring later; there are no alert definitions or actionable configuration steps.",
+      "source": "documentdb-monitoring",
+      "searched": "",
+      "fix": "Provide optional tier-aware alert examples or link an actionable monitoring setup procedure, clearly separated from the local demonstration."
+    },
+    {
+      "practice": "Exclude sensitive information from resource names and tags.",
+      "category": "naming and security",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P22",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/partitioning#best-practices-for-sharding-data",
+      "status": "followed",
+      "evidence": "app/catalog.py:67-68 uses retail/products; no personal resource names or tags are supplied.",
+      "source": "Sharding for horizontal scalability in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Initialize MongoClient after prefork worker creation.",
+      "category": "connection handling",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P24",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app happens to use lazy initialization at app/catalog.py:32-48 and warns against preloading at app/README.md:60; no prefork deployment is supplied.",
+      "source": "MongoDB prior belief",
+      "searched": "Open discovery searched Azure DocumentDB PyMongo/Gunicorn fork initialization and site-specific fork guidance without finding a service-specific source.",
+      "fix": ""
+    },
+    {
+      "practice": "Use the portal-issued SRV URI and preserve service hostname/options.",
+      "category": "connection handling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P25",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/troubleshoot-common-issues",
+      "status": "followed",
+      "evidence": "app/catalog.py:38,40-48 consumes the provided URI rather than reconstructing a host; app/README.md:41 explains preserving portal options, with the disclosed retry/TLS overrides.",
+      "source": "Troubleshoot common issues in Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Require TLS with certificate and hostname validation for managed connections.",
+      "category": "connection security",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P26",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md",
+      "status": "followed",
+      "evidence": "app/catalog.py:43-44; app/tests/test_sample.py:168-170.",
+      "source": "documentdb-security",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Choose finite connection timeouts based on application latency context.",
+      "category": "connection handling",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P28",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md",
+      "status": "followed",
+      "evidence": "app/catalog.py:46-49 bounds database operations and embedding calls; D006 and app/README.md:14 disclose the small synchronous-demo assumption rather than claiming universal timeout values.",
+      "source": "documentdb-connection",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Retain default maxPoolSize unless workload context justifies tuning.",
+      "category": "connection handling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P29",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md",
+      "status": "followed",
+      "evidence": "app/catalog.py:42-48 supplies no pool-size override; D006 and app/README.md:14 disclose why defaults remain.",
+      "source": "documentdb-connection",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Configure appName for application-identifiable database diagnostics.",
+      "category": "observability",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P30",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/catalog.py:42-48 does not explicitly configure appName; the externally supplied URI might contain it.",
+      "source": "MongoDB prior belief",
+      "searched": "Open discovery searched Azure DocumentDB MongoClient appName diagnostics without finding a service-specific recommendation. The MCP page shows appName configuration but does not establish this recommendation.",
+      "fix": ""
+    },
+    {
+      "practice": "Percent-encode reserved credential characters when inserting them into a connection URI.",
+      "category": "authentication and secrets",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P31",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-visualeaf#connect-by-using-visualeaf",
+      "status": "followed",
+      "evidence": "app/README.md:41 instructs encoding; app/catalog.py:38-42 consumes an already prepared URI and does not interpolate credentials.",
+      "source": "Use VisuaLeaf to connect to Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Ignore real .env files and commit only placeholder .env.example values.",
+      "category": "authentication and secrets",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P33",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app happens to follow it: app/.gitignore:1-3 and app/.env.example:3-4. The targeted audit also found this convention in local-env-driven-config.",
+      "source": "General prior belief; corroborating local-env-driven-config found during audit",
+      "searched": "Open discovery did not find the complete convention. During this audit, loading local-env-driven-config explicitly revealed .gitignore/.env.example guidance; the supplied practice's prior-knowledge classification is retained.",
+      "fix": ""
+    },
+    {
+      "practice": "Redact secrets from logs and exception responses.",
+      "category": "authentication and secrets",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P34",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app generally follows it: app/app.py:33-37 and app/seed.py:80-82 use generic dependency errors. app/seed.py:83-84 prints local ValueError text.",
+      "source": "General prior belief",
+      "searched": "Open discovery searched Azure DocumentDB redact/password/API-key/logging recommendations without finding the complete service-specific rule.",
+      "fix": ""
+    },
+    {
+      "practice": "Use a separate read-only runtime user while accounting for cluster-wide native roles.",
+      "category": "authentication and authorization",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P35",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/limitations#authentication-and-access-control-role-based-access-control",
+      "status": "not_assessable",
+      "evidence": "app/README.md:20 suggests switching to a read-only user, but app/catalog.py:38-45 accepts one externally supplied URI and its effective permissions cannot be inspected.",
+      "source": "Azure DocumentDB service limits and quotas reference",
+      "searched": "Inspected configuration and README and fetched native-role limitations. No runtime identity or role assignments were supplied; README omits the cluster-wide scope caveat.",
+      "fix": ""
+    },
+    {
+      "practice": "Restrict cluster access using private endpoints or narrowly scoped firewall rules.",
+      "category": "provisioning and security",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P36",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/security#transport-security",
+      "status": "not_assessable",
+      "evidence": "app/README.md:21 correctly requires developer-IP/private access, but the existing cluster's actual rules are unavailable.",
+      "source": "Secure your Azure DocumentDB cluster",
+      "searched": "Inspected app, README and build trace for networking definitions or target-cluster inspection. No infrastructure or relevant live cluster configuration was supplied.",
+      "fix": ""
+    },
+    {
+      "practice": "Use stable IDs and idempotent upserts when seeding.",
+      "category": "data modeling and seeding",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P38",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-build-python-console-app#perform-common-operations",
+      "status": "followed",
+      "evidence": "app/data/products.json:2-21 supplies stable IDs; app/seed.py:49 uses replace_one(..., upsert=True), an equivalent stable-ID upsert rather than the discovered example's update_one.",
+      "source": "Build a Python console app with Azure DocumentDB",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Use integer minor units or Decimal128 for monetary prices.",
+      "category": "data modeling",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P39",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app does not follow this representation: app/data/products.json:2-21 contains floating-point prices. app/README.md:10 explicitly labels them illustrative, not checkout accounting.",
+      "source": "MongoDB prior belief",
+      "searched": "Open discovery searched Azure DocumentDB monetary-price modeling. Decimal128 support and example float prices do not establish a recommendation.",
+      "fix": ""
+    },
+    {
+      "practice": "Store embedding model and version metadata to support migration.",
+      "category": "data modeling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P40",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md",
+      "status": "followed",
+      "evidence": "app/seed.py:32-46 stores and checks model/dimension/version/hash metadata; app/README.md:101 describes versioned migration.",
+      "source": "documentdb-vector-search",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Regenerate embeddings when embedded source text changes.",
+      "category": "data modeling",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P41",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app happens to follow it: app/seed.py:29-43 detects changed title/description hashes; app/tests/test_sample.py:139-144 tests re-embedding.",
+      "source": "General prior belief",
+      "searched": "Open discovery searched Azure DocumentDB source-text changes and re-embedding without finding an explicit service recommendation.",
+      "fix": ""
+    },
+    {
+      "practice": "Separate embeddings from different models into different fields or collections.",
+      "category": "vector search",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P42",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app uses only one fixed model at app/catalog.py:12; app/README.md:56,101 warns against model mixing. It implements no multiple-model layout.",
+      "source": "General prior belief",
+      "searched": "Open discovery searched Azure DocumentDB multiple-model vector-space separation without finding the specific fields/collections rule.",
+      "fix": ""
+    },
+    {
+      "practice": "Use the same ada-002 model for query and catalog embeddings.",
+      "category": "vector search",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P43",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/tutorial-ai-advertisement-generation",
+      "status": "followed",
+      "evidence": "app/catalog.py:12,65-69,84-86 provides the shared embedding function used by app/app.py:32 and app/seed.py:43.",
+      "source": "Tutorial: Generate AI advertisements with Azure DocumentDB and Azure OpenAI",
+      "searched": "",
+      "fix": ""
+    },
+    {
+      "practice": "Store flat BSON numeric arrays containing finite values.",
+      "category": "vector data modeling",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P45",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app happens to follow the complete validation rule: app/catalog.py:73-81 returns flat finite float lists; app/seed.py:44 stores them.",
+      "source": "Azure Cosmos DB prior belief; partial Azure DocumentDB numeric-array examples",
+      "searched": "The vector page requires number[] and shows float lists but also warns against double[]; it does not precisely establish the complete BSON/finite-value rule or binary-vector alternative.",
+      "fix": ""
+    },
+    {
+      "practice": "Validate every stored and query vector has exactly 1536 elements.",
+      "category": "vector search",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P46",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app happens to follow it: app/catalog.py:73-86 validates generated query vectors; app/seed.py:38,43 validates cached and new stored vectors.",
+      "source": "General prior belief",
+      "searched": "Open discovery found dimension-matching guidance but not an explicit requirement to validate every vector before submission.",
+      "fix": ""
+    },
+    {
+      "practice": "Embed a deterministic combination of title and description.",
+      "category": "embedding generation",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P47",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "The app happens to follow it and independently satisfies the prompt: app/catalog.py:89-90 joins both fields with a newline.",
+      "source": "General prior belief; starter prompt independently requires both fields",
+      "searched": "Open discovery searched deterministic Azure DocumentDB product title/description embedding guidance without locating a public service rule.",
+      "fix": ""
+    },
+    {
+      "practice": "Record the BSON vector storage representation decision explicitly.",
+      "category": "audit trail",
+      "availability": "discovered_not_listed",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "violated",
+      "evidence": "app/catalog.py:81 and app/seed.py:44 choose ordinary float-array storage. D007/D008 discuss vectors and validation, but no decision explicitly compares BSON array versus Binary storage; app/README.md:103 does.",
+      "source": "Audit of decisions.jsonl against implementation",
+      "searched": "",
+      "fix": "Log the storage encoding, its source and unverified service acceptance, including why binary encoding was not selected."
+    },
+    {
+      "practice": "Decision IDs uniquely identify each logged choice.",
+      "category": "audit trail",
+      "availability": "discovered_not_listed",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "violated",
+      "evidence": "decisions.jsonl:2-3 and events.jsonl:67-68 record two different decisions as D002; D003 is absent.",
+      "source": "Machine trace and decision log",
+      "searched": "",
+      "fix": "Make the decision logger assign unique monotonic IDs atomically; do not rely on record count as proof of uniqueness."
+    }
+  ],
+  "decision_reviews": [
+    {
+      "decision_id": "D001",
+      "assessment": "sound",
+      "comment": "Operator approval permits proceeding despite acknowledged gaps; it is not a claim that live acceptance passed. The readiness guidance at 02-readiness.json:450-460 explicitly limits execution."
+    },
+    {
+      "decision_id": "D002 (decisions.jsonl:2)",
+      "assessment": "sound",
+      "comment": "events.jsonl:51,58 confirms two Azure best-practices failures, specifically missing chat-client configuration. Lines 52-66 confirm skills and Learn fallback. The logged error wording is paraphrased, but the unavailable-capability claim is supported."
+    },
+    {
+      "decision_id": "D002 (decisions.jsonl:3)",
+      "assessment": "sound",
+      "comment": "API-only POST design fits the prompt. 02-readiness.json:451 prohibits automatic provisioning/live writes. Providing optional infrastructure files would still have been permissible. This record improperly shares D002 with another decision."
+    },
+    {
+      "decision_id": "D004",
+      "assessment": "sound",
+      "comment": "Pins match app/requirements.txt:1-4; events.jsonl:69,106,114 supports testing on the available runtime. Python 3.11+ is an explicitly untested compatibility claim, not a verified runtime matrix."
+    },
+    {
+      "decision_id": "D005",
+      "assessment": "questionable",
+      "comment": "Public OpenAI and SCRAM are disclosed local-sample choices and do not contradict the prompt. However, the loaded security rule and Python vector quickstart prefer Entra/passwordless authentication. The README supplies the exception rationale; it should also explain native roles' cluster-wide scope."
+    },
+    {
+      "decision_id": "D006",
+      "assessment": "sound",
+      "comment": "events.jsonl:53-54,60-62,70-71 confirms the cited skills/docs were loaded. The vector quickstart explicitly supports false; retaining default pools and disclosing an operation budget follows context-first guidance despite conflicting generic connection examples."
+    },
+    {
+      "decision_id": "D007",
+      "assessment": "sound",
+      "comment": "events.jsonl:55,64 confirms data-modeling guidance was loaded. app/seed.py:44-46 colocates bounded product data and vectors; the tiny unsharded catalog fits public sharding guidance. Illustrative floating-point prices are not an accounting implementation."
+    },
+    {
+      "decision_id": "D008",
+      "assessment": "sound",
+      "comment": "The prompt fixes ada-002; app/catalog.py:12-18,72-90 implements shared 1536-dimensional normalized embeddings. events.jsonl:59 confirms the normalization rule was read. Binary storage was neither requested nor established by that rule."
+    },
+    {
+      "decision_id": "D009",
+      "assessment": "sound",
+      "comment": "Fetched vector guidance supports numLists=1 for tiny demos, nProbes<=numLists, native cosmosSearch and searchScore. app/catalog.py:16-19,93-103,120-124 matches these choices."
+    },
+    {
+      "decision_id": "D010",
+      "assessment": "sound",
+      "comment": "Stable-ID replacement upserts and readiness polling are implemented and tested. The documented seed-before-index precedent holds; the decision correctly avoids claiming mandatory IVF training order. Readiness polling retries empty results, not raised transient errors."
+    },
+    {
+      "decision_id": "D011",
+      "assessment": "sound",
+      "comment": "Offline tests, limits and generic errors are implemented at app/app.py:12-37 and app/tests/test_sample.py. No-retry OpenAI behavior is a disclosed budget choice, not a service recommendation. Add an explicit embedding-error test before publication."
+    },
+    {
+      "decision_id": "D012",
+      "assessment": "sound",
+      "comment": "events.jsonl:80-84 confirms venv creation, refusal of the POSIX path and subsequent use of the Windows executable. This was a recoverable platform-path mismatch."
+    },
+    {
+      "decision_id": "D013",
+      "assessment": "sound",
+      "comment": "events.jsonl:84-86 records package installation and the isolated-target fallback; lines 106,114 confirm isolated imports/tests. Package-conflict output is truncated in the trace, so the stronger claim about executable resolution is not independently established."
+    },
+    {
+      "decision_id": "D014",
+      "assessment": "sound",
+      "comment": "events.jsonl:95 shows only sales_forecast_db. Readiness prohibits writes and supplies no retail application target. Deferring live acceptance and not mutating unrelated data was correct."
+    },
+    {
+      "decision_id": "D015",
+      "assessment": "questionable",
+      "comment": "M10/32 GiB/single-shard development sizing has first-party precedent, and events.jsonl:97 confirms deployment-skill loading. Keeping an existing-cluster scope is defensible, but the no-resource-change restriction does not prevent shipping optional infrastructure files."
+    },
+    {
+      "decision_id": "D016",
+      "assessment": "sound",
+      "comment": "app/seed.py:32-46 checks metadata and validity while preserving cached values; app/tests/test_sample.py:132-145 supports skipped writes. This avoids unnecessary recomputation, but does not prove externally modified cached vectors remain unit-normalized."
+    },
+    {
+      "decision_id": "D017",
+      "assessment": "sound",
+      "comment": "events.jsonl:100 records the quoting SyntaxError; lines 101-102 show the logged fallback and direct file replacement."
+    },
+    {
+      "decision_id": "D018",
+      "assessment": "sound",
+      "comment": "events.jsonl:107-109 records the failing constructor probe and correction; app/catalog.py:43-44 retains validated TLS without redundant tlsInsecure. The final real-driver offline test is present."
+    },
+    {
+      "decision_id": "D019",
+      "assessment": "sound",
+      "comment": "events.jsonl:110-114 records the second constructor failure, generated-credential regression test and successful final run. app/tests/test_driver_options.py:11-20 uses connect=False and never persists a password."
+    }
+  ],
+  "doc_gaps": [
+    {
+      "topic": "Gallery sample acceptance contract",
+      "what_was_missing": "No located gallery-wide rule requires a complete README, verified README commands, offline tests, all dependency pins, optional infrastructure, or documented shard-key rationale. These are listed_not_found checklist expectations. The deployment skill explains how to provision but does not require infrastructure files for existing-cluster samples.",
+      "where_searched": "Targeted Learn searches for Azure DocumentDB sample README/test/pinning/shard-rationale policies; driver, vector, local and deployment skills and resources.",
+      "effect_on_this_build": "The builder supplied README/tests/pins by author choice but omitted infrastructure. README commands were not verified end-to-end. The catalog is unsharded, so the rationale omission does not affect it.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Ship 'Publishable Azure DocumentDB gallery samples': require demonstration/prerequisite/setup/run/cleanup sections; a complete configuration inventory; exact direct dependency pins and tested runtimes; offline tests plus separately authorized live acceptance; optional parameterized mongoClusters infrastructure even for existing-cluster apps; and shard-key rationale when sharded. Distinguish file generation from permission to deploy.",
+      "priority": "high"
+    },
+    {
+      "topic": "BSON vector encoding and validation",
+      "what_was_missing": "The reference requires BSON binary vectors, but vector skills and public examples use numeric lists. The vector page's number[] versus double[] warning lacks a precise PyMongo/BSON explanation. P45/P46 remain prior-knowledge-only for the complete finite-value and per-vector validation rules.",
+      "where_searched": "Loaded vector-search and normalization/query resources; fetched Integrated vector store and Python vector-algorithm quickstart; reviewed supplied vector-encoding searches and readiness findings.",
+      "effect_on_this_build": "Binary storage was not implemented. Numeric-array indexing and top-10 managed retrieval were not tested, so changing encoding blindly could make the sample incompatible.",
+      "proposed_fix_type": "learn_doc",
+      "proposed_content": "Ship 'Vector BSON representations supported by Azure DocumentDB': supported array element BSON types, Binary vector subtypes if supported, driver/version requirements, index-algorithm compatibility, query-vector representation, finite-value/dimension validation, and a Python encode/insert/search acceptance example. Correct or explicitly justify the double[] warning and align gallery requirements.",
+      "priority": "high"
+    },
+    {
+      "topic": "Connection and retry guidance conflicts",
+      "what_was_missing": "The connection skill enables retryWrites and shows managed port 10255; deployment guidance categorically denies retryable writes; the vector quickstart explicitly requires false. Generic reliability guidance calls for bounded exponential backoff without a consistent scenario-specific implementation.",
+      "where_searched": "Loaded connection/driver/deployment skills; fetched vector quickstart and reliability page; inspected readiness Q04 and supplied authentication/migration conflicts.",
+      "effect_on_this_build": "Readiness correctly selected SRV and false, but the application has no bounded exponential-backoff handling for transient database errors. Agents copying another first-party example could choose incompatible settings.",
+      "proposed_fix_type": "learn_doc",
+      "proposed_content": "Ship 'PyMongo connection and retry profiles for Azure DocumentDB': authoritative SRV/hostname/port guidance; a capability matrix for native/OIDC and vector/CRUD scenarios; driver retry versus application retry distinctions; safe idempotent write retries; deadlines, error classification and bounded backoff tests. Update all contradictory skill examples together.",
+      "priority": "high"
+    },
+    {
+      "topic": "Driver pins and tested runtime matrix",
+      "what_was_missing": "The team expects a pinned supported driver, but no exact-version validation matrix was found. D004 chooses package versions and Python compatibility from model defaults; offline constructor tests do not establish managed-service support.",
+      "where_searched": "Targeted supported/pinned PyMongo searches; driver skill; Python quickstart, vector quickstart and MQL compatibility page.",
+      "effect_on_this_build": "PyMongo 4.15.3 was pinned and tested offline on Python 3.14.10, while Python 3.11-3.13 and live cluster behavior remain unverified.",
+      "proposed_fix_type": "learn_doc",
+      "proposed_content": "Ship 'Validated Python stacks for Azure DocumentDB samples': tested Python/PyMongo/provider-SDK combinations, authentication and vector coverage, minimum versus tested versions, dependency pin/update policy, and CI evidence. Avoid implying every broad wire-compatible version has been tested.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Complete configuration inventories and .env hygiene",
+      "what_was_missing": "The full configuration-inventory convention was found only by name on the MCP Toolkit page; the local skill supplies .env/.gitignore guidance that open discovery missed for P33. The vector app skill does not collect database, Flask and embedding-provider settings into one contract.",
+      "where_searched": "Targeted .env.example/every-setting searches; fetched MCP Toolkit configuration reference; loaded local-env-driven-config.",
+      "effect_on_this_build": "The builder happened to supply a complete safe example, but this depended on author defaults. The discovery classified the complete .env convention as prior knowledge despite an installed rule.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Link 'Sample configuration and secrets' from Python/vector quickstarts and skill entry points. Require inventorying every consumed application setting, marking required/defaulted values, keeping secrets as placeholders, ignoring local .env files, and distinguishing app credentials from MCP profiles. Reuse the existing local rule rather than leaving it local-container-only.",
+      "priority": "high"
+    },
+    {
+      "topic": "Bounded data-model guidance",
+      "what_was_missing": "Explicit unbounded-array avoidance was found only through the named data-modeling resource, whose text still uses former vCore branding.",
+      "where_searched": "Targeted bounded-array searches; documentdb-data-modeling and model-embed-vs-reference.",
+      "effect_on_this_build": "The app is bounded and correct, but open discovery found the document limit without exposing the complete growth rule. Former branding can encourage neighbouring-service assumptions.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Add a bounded-growth section to Azure DocumentDB data-modeling Learn guidance and link it from product-catalog quickstarts. Update model resources to current naming; illustrate fixed embedding arrays and separately referenced unbounded children.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Infrastructure and cleanup discovery from application prompts",
+      "what_was_missing": "Bicep resource-type guidance, parameterized dev settings and cleanup instructions were found only through targeted searches/loading deployment resources, not the open practice list. D015 treated existing-cluster scope as a reason to omit all infrastructure.",
+      "where_searched": "Bicep/Terraform and cleanup searches; deployment skill Step 0.5 and canonical Bicep resource; Python vector quickstart cleanup.",
+      "effect_on_this_build": "Cleanup is documented, but optional infrastructure and tier/storage/region parameters are missing. Low-cost cluster values exist only as README prose.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Link 'Optional infrastructure for application samples' from Flask/Python/vector entry points to a canonical parameterized mongoClusters template, explicit dev overrides, scoped firewall setup and safe dedicated-resource cleanup. State that templates may be shipped without deploying resources.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Current search APIs and compatibility boundaries",
+      "what_was_missing": "Full-text and aggregation support were found only by name during reconciliation. Readiness Q09/Q10 retained community/legacy text syntax and an older compatibility snapshot; the indexing skill still recommends a textSearch key that the current BM25 overview rejects.",
+      "where_searched": "Fetched full-text overview, MQL compatibility and vector pages; loaded indexing guidance; reviewed readiness Q09/Q10.",
+      "effect_on_this_build": "The vector-only pipeline uses the correct API. An optional hybrid extension could use the wrong index engine, score metadata, preview assumptions or feature exclusions.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Prominently link a versioned 'Search and MongoDB compatibility map' from vector/indexing skills: BM25 createSearchIndexes, cosmosSearch vector indexes, gated-preview enrollment, current versus forthcoming operators, legacy $text migration, and verified wire versions/cross-shard capabilities. Remove the contradictory textSearch recommendation.",
+      "priority": "high"
+    },
+    {
+      "topic": "Current naming, CLI and local-image identities",
+      "what_was_missing": "Readiness Q02/Q11 retained old CLI branding and an obsolete registry organization. Correct naming guidance was found only by name. The literal reference ban also conflicts with useful explicit disambiguation.",
+      "where_searched": "Naming/history search; readiness CLI reference and development-loop sources; loaded local and deployment skills.",
+      "effect_on_this_build": "The builder avoided wrong deployment commands and image references by omitting those workflows. README correctly distinguishes services, but fails the reference's literal no-neighbour-name wording.",
+      "proposed_fix_type": "naming_or_disambiguation",
+      "proposed_content": "Ship 'Azure DocumentDB identity and migration naming': current service name, az documentdb/documentdb extension and CLI minimum, current gateway image, unchanged legacy API/hostname identifiers, and explicit distinctions from Amazon DocumentDB and Cosmos RU. Define acceptable disambiguation in gallery naming rules.",
+      "priority": "high"
+    },
+    {
+      "topic": "Feature-state assumptions inherited from older releases",
+      "what_was_missing": "Readiness Q12 assumed a universal change-stream preview flag; Q10 assumed older compatibility exclusions. These are older-service-state beliefs, not demonstrated Amazon DocumentDB confusion.",
+      "where_searched": "Supplied readiness findings grounded in change-stream, release-note and compatibility pages.",
+      "effect_on_this_build": "No change streams or cross-shard transactions were added, so the app avoided these errors. Future extensions could introduce unnecessary flags or workarounds.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Add a dated feature-status table to skill entry points: generally available behavior, tier/version requirements and narrowly gated options such as multishard streams or pre-images. Link current release notes and prohibit inventing universal preview flags from historical guidance.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Pool defaults versus mandatory explicit tuning",
+      "what_was_missing": "P29 contradicts the prior MongoDB-derived belief that every Flask app must explicitly set maxPoolSize and waitQueueTimeoutMS. The connection skill instead retains defaults absent workload justification and reserves queue tuning for relevant workloads.",
+      "where_searched": "P29 source and loaded documentdb-connection context-first/default-pool sections.",
+      "effect_on_this_build": "The builder correctly retained defaults. Without prominent correction, agents may add arbitrary pool knobs and misleading performance claims.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Place a 'Do not tune pools by template' callout in Python/Flask connection guidance: default pool behavior, workload/concurrency evidence required for overrides, queue-timeout scenarios and measurable validation criteria.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Native authorization scope and runtime identity separation",
+      "what_was_missing": "P35 contradicts MongoDB-derived database/collection-scoped native least-privilege assumptions. The limitations page states native role assignment is cluster-wide, while the security skill shows a database-scoped role example. D005 relies on a local SCRAM exception.",
+      "where_searched": "Fetched limitations authentication section; loaded security-entra-rbac; inspected README and D005.",
+      "effect_on_this_build": "README suggests a read-only runtime user but omits cluster-wide scope. Actual runtime identity and permissions are not assessable; a user could reuse seeding/admin credentials.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Ship a prominent 'Read-only runtime identities for catalog samples' section: native cluster-wide roles, supported Entra scopes, separate seed/runtime identity setup, local SCRAM exceptions and permission verification. Correct the database-scoped native role example.",
+      "priority": "high"
+    },
+    {
+      "topic": "Live acceptance and existing-cluster posture verification",
+      "what_was_missing": "No authorized target, embedding access or acceptance runner was supplied to verify index existence, README commands, relevance, firewall rules, runtime permissions or diagnostic eligibility. Existing MCP discovery does not supply app credentials.",
+      "where_searched": "App/README verification sections; events.jsonl:95,104-114; readiness guidance and MCP Toolkit tool descriptions.",
+      "effect_on_this_build": "Offline tests passed, but index creation, vector encoding acceptance, scored top-10 results and existing-cluster security/monitoring posture remain unverified.",
+      "proposed_fix_type": "mcp_tool_or_description",
+      "proposed_content": "Provide an opt-in 'sample acceptance' runner using an operator-selected disposable profile: prerequisite/access checks without exposing secrets; explicit write consent; seed-twice/index/readiness/endpoint checks; read-only role/network/tier diagnostics; scoped cleanup; and machine-readable results distinguishing offline from live evidence.",
+      "priority": "high"
+    },
+    {
+      "topic": "Flask process lifecycle and diagnostic application names",
+      "what_was_missing": "P24/P30 carry MongoDB-derived fork-safety and appName beliefs without located Azure DocumentDB recommendations.",
+      "where_searched": "Supplied site-specific fork/Gunicorn and appName searches; driver and connection skills; MCP configuration example.",
+      "effect_on_this_build": "Lazy client creation and a prefork warning are present; appName is not explicitly set. No production worker configuration is supplied, and neither practice was used to mark the app down.",
+      "proposed_fix_type": "learn_doc",
+      "proposed_content": "Ship 'Flask and PyMongo lifecycle on Azure DocumentDB': whether upstream fork constraints apply, lazy per-worker initialization, shutdown behavior, safe prefork examples, and appName support/diagnostic value or an explicit statement that no service-specific requirement exists.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Secret-safe error handling and bounded HTTP contracts",
+      "what_was_missing": "P34's complete redaction rule and D011's input limits/error contract come from model defaults rather than a service sample rule. Database-secret guidance does not cover all embedding-provider failure paths.",
+      "where_searched": "Supplied redaction searches; app error handlers/tests; security/local configuration guidance.",
+      "effect_on_this_build": "Generic errors and input limits were implemented, but the tests do not directly inject an OpenAI failure. Other builders may leak provider exceptions or allow unbounded request spend.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Add a Python API sample rule: validate empty/type/length/body limits before dependencies; use stable nonsecret dependency errors; never echo raw connection/provider exceptions; inject database and embedding failures in offline tests; disclose timeout/retry budgets. State which limits are sample choices, not database requirements.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Embedding freshness, model separation and cache invariants",
+      "what_was_missing": "P41/P42/P47 remain prior-knowledge-only for source-change regeneration, model-space separation and deterministic input composition. D010/D016 choose text hashes and cached-vector reuse without a complete public sample contract.",
+      "where_searched": "Supplied re-embedding/model-mixing/title-description searches; vector normalization resource; seed code and tests.",
+      "effect_on_this_build": "The builder implements deterministic text hashing and versioned reuse, but cached vectors are checked for validity rather than unit norm. There is no documented multiple-model migration layout.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Extend vector sample guidance with deterministic source composition, source/model/dimension/normalization version metadata, re-embedding on source changes, model-space separation or an explicit applicability statement, and cache invariants. Provide rerun/change/migration tests without unnecessary re-normalization writes.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Illustrative prices versus monetary accounting",
+      "what_was_missing": "P39 carries a MongoDB-derived integer-minor-unit/Decimal128 recommendation; no Azure DocumentDB monetary-modeling recommendation was located.",
+      "where_searched": "Supplied monetary/Decimal128 searches; data-modeling skill; synthetic product data and D007.",
+      "effect_on_this_build": "Prices are floating-point display examples, explicitly not accounting. The app was not marked down against an unsupported service-specific standard.",
+      "proposed_fix_type": "learn_doc",
+      "proposed_content": "Add a retail data-model note distinguishing illustrative display prices from accounting values; document supported decimal BSON types, serialization considerations and recommended monetary representations, or state that upstream application-domain guidance applies.",
+      "priority": "low"
+    },
+    {
+      "topic": "Embedding provider selection and authentication exceptions",
+      "what_was_missing": "D005 selects public OpenAI rather than Azure OpenAI from an author default. Provider selection, credentials, data transfer and ada-002 availability are not specified by the starter prompt. First-party endpoint-switching and passwordless guidance could answer configuration differences but is not prominent in the vector skill.",
+      "where_searched": "D005, README prerequisites, readiness provider findings and the recorded endpoint-switching source.",
+      "effect_on_this_build": "The provider choice is disclosed and plausible, but live model access is unverified and Azure OpenAI cannot be substituted by changing only the key.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Link 'Choose an embedding provider for Azure DocumentDB samples' from the vector skill: public versus Azure endpoints, model versus deployment names, environment inventories, Entra/API-key choices, access/billing checks and data-transfer disclosure. Ask for provider choice or label the assumption explicitly.",
+      "priority": "medium"
+    },
+    {
+      "topic": "IVF catalog sizing and lifecycle semantics",
+      "what_was_missing": "Readiness S03 initially copied numLists=100 for 20 products; S05 treated seed-before-index as mandatory training order. Correct size guidance exists, but public examples differ in ordering and do not settle training/rebuild semantics.",
+      "where_searched": "Fetched vector and algorithm quickstart pages; readiness S03/S05; D009/D010.",
+      "effect_on_this_build": "Corrections produced numLists=1 and a bounded search probe. The builder appropriately avoided claiming mandatory training semantics, but live lifecycle behavior remains unverified.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Add an IVF-specific skill resource with tiny-catalog defaults, integer numLists selection, nProbes bounds and recall measurement. Explain whether index-before-data is supported, how clustering changes with ingestion, and when rebuilding is required. Include a scored readiness test rather than fixed sleeps or listIndexes-only acceptance.",
+      "priority": "high"
+    }
+  ]
+}

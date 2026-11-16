@@ -1,0 +1,424 @@
+{
+  "beliefs": [
+    {
+      "id": "K01",
+      "practice": "Create one reusable PyMongo MongoClient per Flask worker process rather than creating a client for every request.",
+      "category": "connection handling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K02",
+      "practice": "Initialize MongoClient after worker processes fork when deploying Flask under a prefork server such as Gunicorn.",
+      "category": "connection handling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K03",
+      "practice": "Use the service-provided connection string, including its required hostname and connection options, rather than reconstructing it from assumptions about another MongoDB-compatible service.",
+      "category": "connection handling",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K04",
+      "practice": "Require TLS for database connections and leave certificate and hostname validation enabled; do not use tlsAllowInvalidCertificates or tlsAllowInvalidHostnames.",
+      "category": "connection security",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K05",
+      "practice": "Set retryWrites=false in the Azure DocumentDB connection configuration rather than relying on PyMongo's default retryable-write behavior.",
+      "category": "connection handling",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K06",
+      "practice": "Configure finite serverSelectionTimeoutMS, connectTimeoutMS, and socketTimeoutMS values consistent with the API's request deadline.",
+      "category": "connection handling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K07",
+      "practice": "Set maxPoolSize and waitQueueTimeoutMS explicitly so concurrent Flask requests cannot create unbounded database connection pressure or wait indefinitely for a connection.",
+      "category": "connection handling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K08",
+      "practice": "Configure appName on MongoClient so database diagnostics can identify connections from this application.",
+      "category": "observability",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K09",
+      "practice": "Percent-encode username and password components with urllib.parse.quote_plus when constructing a MongoDB connection URI.",
+      "category": "authentication and secrets",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K10",
+      "practice": "Load database credentials and embedding-service credentials from environment variables or a secret manager rather than hardcoding them.",
+      "category": "authentication and secrets",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K11",
+      "practice": "Exclude real .env files from version control and keep only placeholder values in .env.example.",
+      "category": "authentication and secrets",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K12",
+      "practice": "Redact database connection strings, passwords, and API keys from application logs and exception responses.",
+      "category": "authentication and secrets",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K13",
+      "practice": "Give the runtime database identity only the catalog read permissions it needs, and use a separate provisioning identity for seeding and index creation.",
+      "category": "authentication and authorization",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K14",
+      "practice": "Restrict database network access to application hosts through private networking or narrowly scoped firewall rules.",
+      "category": "provisioning and security",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K15",
+      "practice": "Store each product's title, description, embedding, and display metadata together in one document so a vector-search result does not require a second database lookup.",
+      "category": "data modeling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K16",
+      "practice": "Assign each catalog product a stable _id and seed it with update_one using upsert=true rather than unconditional insert_one calls.",
+      "category": "data modeling and seeding",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K17",
+      "practice": "Store monetary prices as integer minor units or Decimal128 rather than binary floating-point values.",
+      "category": "data modeling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K18",
+      "practice": "Record the embedding model identifier and a hash or version of the embedded source text alongside each product embedding.",
+      "category": "data modeling",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K19",
+      "practice": "Regenerate a product's embedding whenever its embedded title or description changes.",
+      "category": "data modeling",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K20",
+      "practice": "Keep embeddings from different models in separate vector fields or collections rather than searching them as one shared vector space.",
+      "category": "vector search",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K21",
+      "practice": "Use the same text-embedding-ada-002 model for catalog embeddings and query embeddings.",
+      "category": "vector search",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K22",
+      "practice": "Configure the vector index with dimensions=1536 for text-embedding-ada-002 embeddings.",
+      "category": "vector indexing",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K23",
+      "practice": "Store embeddings as flat BSON arrays of finite numeric values, not strings, nested arrays, or serialized JSON.",
+      "category": "vector data modeling",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K24",
+      "practice": "Validate that every stored and query embedding has exactly 1536 elements before submitting it to Azure DocumentDB.",
+      "category": "vector search",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K25",
+      "practice": "Embed a deterministic combination of the product title and description rather than embedding only the title.",
+      "category": "embedding generation",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K26",
+      "practice": "Respect text-embedding-ada-002's input-token limit by rejecting or deterministically truncating oversized embedding input.",
+      "category": "embedding generation",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K27",
+      "practice": "Batch catalog embedding requests during seeding instead of making one network request per product.",
+      "category": "embedding generation",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K28",
+      "practice": "Reuse a stored embedding during repeated seeding when both the source-text hash and embedding model identifier are unchanged.",
+      "category": "embedding generation and seeding",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K29",
+      "practice": "Create the native IVF index with a key such as {\"embedding\":\"cosmosSearch\"} and cosmosSearchOptions containing kind=\"vector-ivf\", dimensions=1536, similarity=\"COS\", and an explicit numLists.",
+      "category": "vector indexing",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K30",
+      "practice": "Use numLists=1 for the 20-product sample rather than a large IVF partition count intended for a substantial catalog.",
+      "category": "vector indexing",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K31",
+      "practice": "Populate the representative catalog before creating the IVF index so its partitioning is based on actual vectors.",
+      "category": "vector indexing",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K32",
+      "practice": "Give the vector index a stable name and inspect list_indexes before attempting to create it again.",
+      "category": "index provisioning",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K33",
+      "practice": "Check an existing vector index's dimensions, similarity, kind, and numLists against the requested configuration instead of treating its name alone as proof of compatibility.",
+      "category": "index provisioning",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K34",
+      "practice": "Create catalog data and vector indexes in an explicit seed or migration command rather than during Flask module import or every request.",
+      "category": "provisioning",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K35",
+      "practice": "Execute native vector search with an aggregation $search stage containing cosmosSearch.vector, cosmosSearch.path=\"embedding\", and cosmosSearch.k=10.",
+      "category": "vector queries",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K36",
+      "practice": "Place the vector $search stage first in the aggregation pipeline.",
+      "category": "vector queries",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K37",
+      "practice": "Project the native vector score with {\"$meta\":\"searchScore\"} instead of recomputing similarity in Flask.",
+      "category": "vector queries",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K38",
+      "practice": "Preserve the vector-search result order when returning products rather than re-sorting results by a catalog field.",
+      "category": "vector queries",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K39",
+      "practice": "Exclude the embedding field from the /search response with an explicit aggregation projection.",
+      "category": "queries and API responses",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K40",
+      "practice": "Push category, availability, or tenant restrictions into the vector-search filter rather than filtering only after the top 10 neighbors have been selected.",
+      "category": "vector queries",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K41",
+      "practice": "Create ordinary indexes for catalog fields used in equality filters or product lookups instead of assuming the vector index accelerates those operations.",
+      "category": "indexing",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K42",
+      "practice": "Tune IVF numLists and query nProbes against measured recall and latency as the catalog grows.",
+      "category": "vector search performance",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "low"
+    },
+    {
+      "id": "K43",
+      "practice": "Compare approximate IVF results against an exact cosine-similarity baseline on a representative query set.",
+      "category": "vector search testing",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K44",
+      "practice": "Validate that POST /search receives a JSON object with a nonempty string query before calling the embedding service.",
+      "category": "API validation",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K45",
+      "practice": "Construct the aggregation pipeline from server-controlled fields rather than accepting a client-supplied MongoDB query or pipeline.",
+      "category": "query security",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K46",
+      "practice": "Apply a finite maxTimeMS to the vector aggregation so database execution cannot consume the entire request budget indefinitely.",
+      "category": "query execution",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K47",
+      "practice": "Serialize BSON values such as ObjectId into a documented JSON-safe representation before returning Flask responses.",
+      "category": "API responses",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K48",
+      "practice": "Retry transient database connectivity failures with bounded exponential backoff and jitter.",
+      "category": "retries",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K49",
+      "practice": "Retry embedding-service rate limits and transient server failures with bounded backoff that honors Retry-After.",
+      "category": "retries",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K50",
+      "practice": "Retry catalog writes only through an idempotent operation keyed by the stable product identifier.",
+      "category": "retries and seeding",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K51",
+      "practice": "Do not retry authentication failures, malformed vectors, or invalid index definitions as though they were transient failures.",
+      "category": "retries",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K52",
+      "practice": "Provision a cluster tier and service version that support native vector-ivf indexes before deploying the search application.",
+      "category": "provisioning",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K53",
+      "practice": "Size cluster memory for the vector index and expected concurrent searches rather than sizing only for the BSON catalog storage.",
+      "category": "provisioning and capacity",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K54",
+      "practice": "Expose a readiness check that verifies database connectivity and the required vector index without reseeding the catalog.",
+      "category": "operations",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K55",
+      "practice": "Measure embedding-service latency separately from database vector-search latency.",
+      "category": "observability",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K56",
+      "practice": "Run an integration test against Azure DocumentDB that creates the IVF index and executes the actual $search pipeline instead of relying only on MongoDB mocks.",
+      "category": "compatibility testing",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K57",
+      "practice": "Pin compatible PyMongo and embedding-SDK versions in the dependency configuration.",
+      "category": "dependencies",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K58",
+      "practice": "Deploy Flask behind a production WSGI server with debug mode disabled rather than exposing the Flask development server.",
+      "category": "application deployment",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K59",
+      "practice": "Rate-limit the public search endpoint to bound embedding-service cost and database load.",
+      "category": "application security and capacity",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K60",
+      "practice": "Enable a defined backup and restore policy before treating the catalog as production data.",
+      "category": "provisioning and recovery",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    }
+  ]
+}

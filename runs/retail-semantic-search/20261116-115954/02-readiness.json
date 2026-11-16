@@ -1,0 +1,462 @@
+{
+  "verdict": "ready_with_gaps",
+  "summary": "The coding agent can start building the Flask sample. Sources verify the central requirements: ada-002 produces 1,536-dimensional embeddings, Azure DocumentDB supports IVF indexes, and $search/cosmosSearch retrieves the top k products. Live acceptance testing remains conditional on user-supplied database and embedding credentials and permission to seed data and create an index; this run prohibits writes. The largest product friction is contradictory connection guidance, including retryWrites values within the same official authentication page. Other findings are an outdated CLI installation, a moved local-container image, legacy full-text-search assumptions, and IVF parameters copied without regard to catalog size. No required inventory tool is unavailable without a workaround.",
+  "tools": [
+    {
+      "name": "Python",
+      "kind": "cli",
+      "needed_for": "Run Flask, catalog ingestion, embedding calls, and PyMongo queries.",
+      "available": true,
+      "detail": "Python 3.14.10. This differs from the review's assumed Python 3.11; dependency compatibility was not tested.",
+      "impact_if_missing": "The application and seed script cannot execute.",
+      "workaround": "Use the installed runtime after dependency validation, or have the user supply a compatible Python environment."
+    },
+    {
+      "name": "pip and venv",
+      "kind": "cli",
+      "needed_for": "Install and isolate the Python application dependencies.",
+      "available": false,
+      "detail": "Allowed by policy, but installation and functionality are not established by the inventory. This is unknown availability, not a confirmed missing installation.",
+      "impact_if_missing": "Dependencies cannot be installed reproducibly.",
+      "workaround": "Use Python's module-based package installation and virtual-environment workflow, documented in the Python vector quickstart; repair packaging support if unavailable."
+    },
+    {
+      "name": "Flask, PyMongo, and openai Python packages",
+      "kind": "other",
+      "needed_for": "HTTP endpoint, MongoDB-compatible data access, and ada-002 embedding generation.",
+      "available": false,
+      "detail": "Package installation and versions were not inventoried. Sources establish PyMongo and openai usage, but not a tested Flask/PyMongo/openai combination on Python 3.14.",
+      "impact_if_missing": "Application imports fail.",
+      "workaround": "Install dependencies in a virtual environment and pin versions after validating them. The DocumentDB Python quickstart supplies a PyMongo/openai baseline, not a complete Flask requirements file."
+    },
+    {
+      "name": "documentdb-vector-search",
+      "kind": "skill",
+      "needed_for": "Select IVF, configure cosmosSearch, match vector dimensions, and construct the top-10 query.",
+      "available": true,
+      "detail": "Loaded, including vector-knn-query.md and vector-normalize-embeddings.md. Official vector documentation supplies catalog-dependent numLists guidance.",
+      "impact_if_missing": "An agent may substitute Atlas or Cosmos DB NoSQL vector-index syntax.",
+      "workaround": "Use https://learn.microsoft.com/azure/documentdb/vector-search."
+    },
+    {
+      "name": "documentdb-driver",
+      "kind": "skill",
+      "needed_for": "Reuse one MongoClient per Flask process.",
+      "available": true,
+      "detail": "Loaded driver-singleton-client.md. Its retryWrites=true example conflicts with the official vector quickstart.",
+      "impact_if_missing": "A client per request causes unnecessary connections and TLS handshakes.",
+      "workaround": "Follow the singleton pattern but take retryWrites=false from the official Python vector quickstart."
+    },
+    {
+      "name": "documentdb-connection",
+      "kind": "skill",
+      "needed_for": "TLS, authentication, URI configuration, and connection reuse.",
+      "available": true,
+      "detail": "Loaded. Recommends retryWrites=true and a non-SRV endpoint on port 10255, conflicting with official managed-service connection guidance.",
+      "impact_if_missing": "Incorrect connection configuration can prevent database access.",
+      "workaround": "Use the portal-issued SRV URI, official port-10260 troubleshooting guidance, and the Python vector quickstart's retryWrites=false setting."
+    },
+    {
+      "name": "documentdb-data-modeling",
+      "kind": "skill",
+      "needed_for": "Store product metadata and embeddings together in a small, unsharded catalog.",
+      "available": true,
+      "detail": "Loaded. Covers colocating related data and the 16 MB document limit.",
+      "impact_if_missing": "The agent has less guidance on document shape and size.",
+      "workaround": "Use the original-data-plus-vector pattern in the official vector documentation."
+    },
+    {
+      "name": "documentdb-security",
+      "kind": "skill",
+      "needed_for": "Require TLS and distinguish firewall access from database authentication.",
+      "available": true,
+      "detail": "Installed and loaded. Production CMK and private-endpoint design are outside this sample's assumed scope.",
+      "impact_if_missing": "Secrets or certificate-validation exceptions may be handled unsafely.",
+      "workaround": "Use official security and connection documentation; keep secrets outside the repository."
+    },
+    {
+      "name": "documentdb-local-deployment",
+      "kind": "skill",
+      "needed_for": "Optional local integration-test environment and environment-driven seed/configuration conventions.",
+      "available": true,
+      "detail": "Loaded. Identifies ghcr.io/documentdb/documentdb/documentdb-local:latest and MongoDB port 10260.",
+      "impact_if_missing": "The local engine may be mistaken for a Cosmos DB emulator or launched from the wrong registry path.",
+      "workaround": "Use https://learn.microsoft.com/azure/documentdb/development-loop. Local testing does not replace managed-service acceptance testing."
+    },
+    {
+      "name": "documentdb-azure-deployment",
+      "kind": "skill",
+      "needed_for": "Optional cluster prerequisite documentation and correct Azure resource identity.",
+      "available": true,
+      "detail": "Loaded. Supplies Microsoft.DocumentDB/mongoClusters and a generic az resource deployment path. Provisioning is not requested and is prohibited in this run.",
+      "impact_if_missing": "Optional infrastructure documentation may target an RU-based Cosmos DB account.",
+      "workaround": "Connect to an existing cluster and reference the official DocumentDB quickstarts."
+    },
+    {
+      "name": "documentdb-mcp-setup",
+      "kind": "skill",
+      "needed_for": "Understand administrator-controlled connection profiles and safely configure the optional data-plane MCP connection.",
+      "available": true,
+      "detail": "Loaded. Credentials belong in local configuration, not chat or agent-generated files.",
+      "impact_if_missing": "An agent may assume MCP credentials are available to the Flask application.",
+      "workaround": "Configure DOCUMENTDB_URI independently, with the user entering its secret value locally."
+    },
+    {
+      "name": "DocumentDB MCP Toolkit",
+      "kind": "mcp_server",
+      "needed_for": "Optional collection, document, and index inspection during development.",
+      "available": true,
+      "detail": "Inventory confirms 18 tools, including aggregate, list_indexes, and sample_documents. Server availability does not establish the target cluster, credentials, or write authorization.",
+      "impact_if_missing": "Interactive data-plane inspection is slower, but application development can continue.",
+      "workaround": "Use PyMongo for application operations and user-authorized validation. No MCP writes were performed."
+    },
+    {
+      "name": "Microsoft Learn MCP Server",
+      "kind": "mcp_server",
+      "needed_for": "Verify service identity, vector syntax, embedding dimensions, and conflicting guidance.",
+      "available": true,
+      "detail": "Inventory confirms three tools. Search and fetch succeeded in this assessment.",
+      "impact_if_missing": "The agent must rely more heavily on inconsistent installed skills or memory.",
+      "workaround": "Read the cited official documentation directly."
+    },
+    {
+      "name": "Azure MCP Server",
+      "kind": "mcp_server",
+      "needed_for": "Optional Azure metadata inspection and Azure/AI best-practice guidance.",
+      "available": true,
+      "detail": "Inventory confirms 73 tools. A substantive azure_cosmos capability-discovery call returned 'Error: Function failed'; no DocumentDB data-plane replacement was established.",
+      "impact_if_missing": "Optional control-plane discovery is less convenient; Flask and vector retrieval do not depend on this server.",
+      "workaround": "Use the dedicated DocumentDB MCP server, Learn documentation, and existing Azure CLI."
+    },
+    {
+      "name": "Azure CLI",
+      "kind": "cli",
+      "needed_for": "Optional read-only cluster and network inspection.",
+      "available": true,
+      "detail": "2.73.0 with cosmosdb-preview 1.7.0. The current documentdb extension requires Azure CLI 2.75.0 or higher.",
+      "impact_if_missing": "Command-line inspection and optional infrastructure instructions are less convenient.",
+      "workaround": "Use the portal or generic resource commands; a user-provided cluster URI avoids a CLI dependency."
+    },
+    {
+      "name": "Azure CLI documentdb extension",
+      "kind": "cli",
+      "needed_for": "Optional current az documentdb mongocluster inspection commands.",
+      "available": false,
+      "detail": "Not in the inventory's extension list, and installed Azure CLI is below the documented minimum.",
+      "impact_if_missing": "Current quickstart commands cannot be assumed to work on this machine.",
+      "workaround": "Use portal/generic ARM inspection, or upgrade Azure CLI and install the documentdb extension."
+    },
+    {
+      "name": "Azure sign-in",
+      "kind": "credential",
+      "needed_for": "Optional Azure resource inspection or an explicitly selected Entra authentication path.",
+      "available": true,
+      "detail": "Signed in to cosmosdb-programmability-demo-1mqps. This does not prove DocumentDB data-plane access or embedding-provider access.",
+      "impact_if_missing": "Azure metadata inspection and Azure Identity token acquisition may fail.",
+      "workaround": "The assumed native database-authentication and public OpenAI path does not require Azure sign-in."
+    },
+    {
+      "name": "DocumentDB application credentials and reachable cluster",
+      "kind": "credential",
+      "needed_for": "Store products, create the IVF index, and execute live searches.",
+      "available": false,
+      "detail": "No application URI, chosen cluster, database privileges, or network reachability is established. A responding MCP server is not proof of these application prerequisites.",
+      "impact_if_missing": "Live database acceptance testing cannot complete.",
+      "workaround": "Have the user configure DOCUMENTDB_URI locally for an existing suitable cluster, grant seed/index privileges, and provide network access. Build and mocked tests can start beforehand."
+    },
+    {
+      "name": "Embedding-provider credentials and ada-002 access",
+      "kind": "credential",
+      "needed_for": "Generate catalog and query embeddings.",
+      "available": false,
+      "detail": "No OPENAI_API_KEY or Azure OpenAI endpoint/deployment/access assignment is supplied or inventoried.",
+      "impact_if_missing": "Real ingestion embeddings and natural-language searches cannot execute.",
+      "workaround": "Document public OpenAI as an explicit assumption and have the user configure its key locally, or select Azure OpenAI and configure its endpoint, deployment name, and authentication. Mock embedding calls for offline tests."
+    },
+    {
+      "name": "Docker and local DocumentDB image",
+      "kind": "cli",
+      "needed_for": "Optional local database integration tests.",
+      "available": true,
+      "detail": "Docker 29.9.3 is installed. Daemon readiness, cached image, and a running container are not established.",
+      "impact_if_missing": "Local database integration tests cannot run.",
+      "workaround": "Use an existing managed cluster or have the user prepare the documented gateway image. Do not treat the unverified image cache as a confirmed missing accelerator."
+    },
+    {
+      "name": "mongosh",
+      "kind": "cli",
+      "needed_for": "Optional manual connectivity and index inspection.",
+      "available": false,
+      "detail": "Not found on PATH.",
+      "impact_if_missing": "Shell-based instructions cannot be run directly.",
+      "workaround": "Use installed DocumentDB MCP read tools or PyMongo; mongosh is not required by the app."
+    },
+    {
+      "name": "Node.js and npx",
+      "kind": "cli",
+      "needed_for": "Maintain or launch the installed MCP/skill accelerators, not run Flask.",
+      "available": true,
+      "detail": "Node v26.13.0; npx 11.20.0.",
+      "impact_if_missing": "npx-based MCP launch or skill installation would be unavailable.",
+      "workaround": "Use a prebuilt MCP server or direct documentation/PyMongo."
+    },
+    {
+      "name": "Git",
+      "kind": "cli",
+      "needed_for": "Source control and the documented GitHub-based MCP installation path.",
+      "available": true,
+      "detail": "2.56.0.windows.4.",
+      "impact_if_missing": "Repository management and GitHub-based accelerator installation are less convenient.",
+      "workaround": "Use downloaded source archives and an already-installed MCP server."
+    }
+  ],
+  "accelerators_missed": [
+    "Current Azure CLI documentdb extension: the installed cosmosdb-preview extension is not the current accelerator. The CLI reference requires Azure CLI >=2.75.0 and documents automatic extension installation on first use. Upgrade the CLI, then install the documentdb extension; https://learn.microsoft.com/cli/azure/documentdb/mongocluster."
+  ],
+  "confusions": [
+    {
+      "question_id": "Q01",
+      "question": "What is the Azure resource provider namespace and resource type?",
+      "cold_answer": "Microsoft.DocumentDB; Microsoft.DocumentDB/mongoClusters.",
+      "grounded_answer": "Correct: Microsoft.DocumentDB/mongoClusters is the managed cluster resource type.",
+      "grounding_source": "documentdb-azure-deployment; https://learn.microsoft.com/cli/azure/documentdb/mongocluster",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No observed confusion despite the shared Microsoft.DocumentDB namespace.",
+      "build_risk": "None from this answer."
+    },
+    {
+      "question_id": "Q02",
+      "question": "Which CLI command group manages clusters, and is it core or an extension?",
+      "cold_answer": "az cosmosdb mongocluster, provided by cosmosdb-preview.",
+      "grounded_answer": "The current group is az documentdb mongocluster, provided by the documentdb extension, requiring Azure CLI 2.75.0 or higher. Extension classification was correct; group and extension names were outdated.",
+      "grounding_source": "https://learn.microsoft.com/cli/azure/documentdb/mongocluster",
+      "outcome": "partly_wrong",
+      "confused_with": "legacy_vcore_naming",
+      "why_the_confusion_arose": "The answer retained the service's earlier Cosmos DB CLI branding and extension package after the product rename.",
+      "build_risk": "Current README commands would not match the official interface, and installing cosmosdb-preview would not clear the new CLI prerequisite."
+    },
+    {
+      "question_id": "Q03",
+      "question": "Which Bicep and Terraform resource types deploy a cluster?",
+      "cold_answer": "Microsoft.DocumentDB/mongoClusters@2024-07-01 in Bicep and azurerm_mongo_cluster in Terraform.",
+      "grounded_answer": "Both resource types are correct. The 2024-07-01 API is documented; installed deployment guidance uses the newer 2025-09-01 API.",
+      "grounding_source": "documentdb-azure-deployment; https://learn.microsoft.com/azure/templates/microsoft.documentdb/2024-07-01/mongoclusters",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "An older valid API version is not evidence of targeting another service.",
+      "build_risk": "No resource-identity error. Newer optional properties must use a matching API schema."
+    },
+    {
+      "question_id": "Q04",
+      "question": "What connection scheme, host, port, and options should be used?",
+      "cold_answer": "mongodb+srv on mongocluster.cosmos.azure.com, port 10260, TLS, SCRAM-SHA-256, retrywrites=false, maxIdleTimeMS=120000; retryable writes are unsupported.",
+      "grounded_answer": "The SRV scheme, host suffix, port 10260, TLS, and native SCRAM mechanism are supported. Both self and global hostnames are documented. retryWrites=false is explicitly prescribed by the Python vector quickstart, but a blanket claim that the service never supports retryable writes cannot be settled: installed skills and official authentication/migration pages conflict. maxIdleTimeMS is recommended configuration, not an authentication requirement.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/troubleshoot-common-issues; https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control; https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm; documentdb-connection; documentdb-azure-deployment",
+      "outcome": "partly_wrong",
+      "confused_with": "unknown",
+      "why_the_confusion_arose": "The categorical limitation is stronger than the conflicting sources support. This is source inconsistency, not a demonstrated Amazon DocumentDB mix-up.",
+      "build_risk": "The sample's false setting has direct support. Conversely, copying retryWrites=true or port 10255 from the connection skill risks incompatible sample configuration."
+    },
+    {
+      "question_id": "Q05",
+      "question": "How is capacity provisioned and billed?",
+      "cold_answer": "Compute tiers with vCores, memory, storage, shards, and optional HA; not request units.",
+      "grounded_answer": "Correct. Compute is billed by tier per shard and storage by provisioned capacity; there are no request units or per-operation I/O charges.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/pricing-explained",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No observed confusion with the RU-based sibling.",
+      "build_risk": "None from this answer."
+    },
+    {
+      "question_id": "Q06",
+      "question": "Which authentication methods and Entra driver flow are supported?",
+      "cold_answer": "Native SCRAM-SHA-256 or Entra MONGODB-OIDC with an Azure Identity callback requesting https://ossrdbms-aad.database.windows.net/.default.",
+      "grounded_answer": "Native and Entra authentication are supported. Official Python examples use MONGODB-OIDC, an OIDC callback, and exactly the stated token scope. Entra access requires cluster authentication configuration and a registered database principal; Azure sign-in alone is insufficient. The fetched examples do not explicitly establish the cold answer's authSource=$external setting.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control; https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "The important token audience and OIDC mechanism match the source; the optional authSource detail was not independently established.",
+      "build_risk": "No verified mechanism error. An Entra implementation would fail without data-plane principal registration."
+    },
+    {
+      "question_id": "Q07",
+      "question": "Which application client library should be used?",
+      "cold_answer": "Standard MongoDB drivers, including PyMongo; no separate DocumentDB data-plane SDK is required.",
+      "grounded_answer": "Correct. Official Python samples use pymongo.MongoClient and MongoDB query syntax.",
+      "grounding_source": "documentdb-driver; https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm; https://learn.microsoft.com/azure/documentdb/compatibility-query-language",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No observed confusion with Cosmos DB NoSQL SDKs.",
+      "build_risk": "None from this answer."
+    },
+    {
+      "question_id": "Q08",
+      "question": "Which vector index types and creation command are supported?",
+      "cold_answer": "vector-ivf, vector-hnsw, vector-diskann; createIndexes with a cosmosSearch key and cosmosSearchOptions.",
+      "grounded_answer": "Correct. The index shape and three kind values match the source. numLists=100 is an example value, not a general recommendation for this small sample.",
+      "grounding_source": "documentdb-vector-search; https://learn.microsoft.com/azure/documentdb/vector-search",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "The answer correctly retains the service-specific cosmosSearch name despite the product rename.",
+      "build_risk": "The syntax is valid, but blindly copying its numLists value creates the sample-specific risk recorded in S03."
+    },
+    {
+      "question_id": "Q09",
+      "question": "How are full-text and hybrid search done?",
+      "cold_answer": "Use a text index, $text, and textScore; combine lexical and vector rankings with application-side RRF.",
+      "grounded_answer": "The current BM25 engine uses createSearchIndexes, named-index $search/text queries, and searchScore. It is gated preview. Hybrid search combines BM25 and cosmosSearch rankings using RRF, either in application code or a documented server-side union pipeline. The legacy $text engine is documented as superseded, not simply nonexistent.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/full-text-search-overview; https://learn.microsoft.com/azure/documentdb/full-text-search-hybrid; documentdb-full-text-search",
+      "outcome": "partly_wrong",
+      "confused_with": "mongodb_atlas_or_server",
+      "why_the_confusion_arose": "The answer reused community MongoDB text-index syntax that also appeared in this service's legacy PostgreSQL TSVector search implementation. Shared $search vocabulary then caused it to reject a now-documented text operator.",
+      "build_risk": "An optional hybrid extension would use the wrong index engine and scoring metadata and could omit preview enrollment. This vector-only sample does not require full-text search."
+    },
+    {
+      "question_id": "Q10",
+      "question": "Which compatibility versions and MongoDB limitations apply?",
+      "cold_answer": "Versions 5.0, 6.0, and 7.0; avoid server-side JavaScript, cross-shard transactions, Atlas-specific search APIs, and replica-set administration.",
+      "grounded_answer": "Sources list wire-protocol compatibility versions 5.0, 6.0, 7.0, and 8.0. The official Atlas comparison explicitly supports ACID transactions across collections and shards. Managed administration and JavaScript limitations remain relevant, but blanket rejection of Atlas-like search primitives is inaccurate because $search/text is now documented.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language; https://learn.microsoft.com/azure/documentdb/compare-mongodb-atlas; https://learn.microsoft.com/azure/documentdb/full-text-search-overview",
+      "outcome": "partly_wrong",
+      "confused_with": "legacy_vcore_naming",
+      "why_the_confusion_arose": "An older service feature snapshot was treated as current, while wire compatibility was used to infer broad exclusions instead of checking the feature matrix.",
+      "build_risk": "The builder may unnecessarily constrain versions or invent transaction workarounds. No cross-shard transaction is needed for this sample."
+    },
+    {
+      "question_id": "Q11",
+      "question": "Which local image and port should development use?",
+      "cold_answer": "ghcr.io/microsoft/documentdb/documentdb-local:latest on localhost:10260.",
+      "grounded_answer": "The documented gateway image is ghcr.io/documentdb/documentdb/documentdb-local:latest. MongoDB traffic uses port 10260. Local connections require credentials and TLS, with certificate-validation relaxation confined to the self-signed local environment.",
+      "grounding_source": "documentdb-local-deployment; https://learn.microsoft.com/azure/documentdb/development-loop",
+      "outcome": "partly_wrong",
+      "confused_with": "open_source_documentdb",
+      "why_the_confusion_arose": "The answer remembered the engine's earlier Microsoft repository/registry ownership rather than the current DocumentDB organization path.",
+      "build_risk": "The supplied image reference may not pull, and merely exposing the port does not complete local authentication and TLS configuration."
+    },
+    {
+      "question_id": "Q12",
+      "question": "Are change streams supported, and what must be enabled?",
+      "cold_answer": "Enable a cluster-wide ChangeStreams preview feature before collection.watch().",
+      "grounded_answer": "Change streams are supported and official examples use collection.watch(). Current documentation specifically gates multishard support and pre-images through support requests; it does not prescribe a universal ChangeStreams flag for every cluster.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/change-streams; https://learn.microsoft.com/azure/documentdb/release-notes",
+      "outcome": "partly_wrong",
+      "confused_with": "legacy_vcore_naming",
+      "why_the_confusion_arose": "The older gated-preview release state was generalized into a permanent, universal activation requirement.",
+      "build_risk": "The builder could add unnecessary provisioning steps or an unsupported flag. Change streams are outside this sample's scope."
+    },
+    {
+      "question_id": "Q13",
+      "question": "Which MCP server supplies DocumentDB data-plane tools?",
+      "cold_answer": "microsoft/documentdb-mcp; do not substitute general Azure resource tools.",
+      "grounded_answer": "The dedicated server and its data-plane role are verified by the installed setup skill and inventory. General Azure MCP data-plane equivalence was not established; azure_cosmos discovery failed.",
+      "grounding_source": "documentdb-mcp-setup; machine_inventory documentdb tool list; azure_cosmos",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No observed confusion. The failed discovery also illustrates why a general Cosmos-branded router is not a reliable substitute for the dedicated toolkit.",
+      "build_risk": "None if the dedicated server is used. Its profile still must be distinguished from the application's configuration."
+    },
+    {
+      "question_id": "Q14",
+      "question": "What was the service previously called, and how does it relate to its neighbors?",
+      "cold_answer": "Previously Azure Cosmos DB for MongoDB vCore; distinct from RU MongoDB and Amazon DocumentDB; managed service based on open-source DocumentDB.",
+      "grounded_answer": "Correct. Official comparison documentation names the former vCore-based Cosmos DB branding and identifies the PostgreSQL-based open-source engine underneath the managed service.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/compare-amazon-documentdb; https://learn.microsoft.com/azure/documentdb/oss",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "The answer correctly separates product branding, managed hosting, and engine identity.",
+      "build_risk": "None from this answer."
+    },
+    {
+      "question_id": "Q15",
+      "question": "What engine is underneath, and does application code change?",
+      "cold_answer": "PostgreSQL-based DocumentDB extensions with a MongoDB-compatible gateway; use MongoDB drivers and queries, not psycopg and SQL.",
+      "grounded_answer": "Correct. Official engine documentation describes PostgreSQL extensions, while managed-service compatibility documentation preserves MongoDB drivers and MQL.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/oss; https://learn.microsoft.com/azure/documentdb/compatibility-query-language; documentdb-local-deployment",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No observed confusion between the engine implementation and the application-facing protocol.",
+      "build_risk": "None from this answer."
+    },
+    {
+      "question_id": "S01",
+      "question": "How should this Flask sample connect and store products?",
+      "cold_answer": "PyMongo MongoClient, SRV URI, TLS, SCRAM-SHA-256, retryWrites=false; products with title, description, and embedding.",
+      "grounded_answer": "The driver, native authentication, TLS, and colocated data/vector shape are supported. The official Python vector quickstart explicitly uses retryWrites=false. Reuse one client per process.",
+      "grounding_source": "documentdb-driver/driver-singleton-client.md; documentdb-data-modeling; https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm; https://learn.microsoft.com/azure/documentdb/vector-search",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No cold-answer confusion; conflicting installed connection guidance must not override the sample-specific official source.",
+      "build_risk": "None from the stated configuration. Creating a client per endpoint invocation would introduce a separate connection-management problem."
+    },
+    {
+      "question_id": "S02",
+      "question": "What dimensions and representation should ada-002 embeddings use?",
+      "cold_answer": "1,536 dimensions; embed concatenated title and description, store a numeric array, and use the same model for queries.",
+      "grounded_answer": "ada-002's 1,536-dimensional output is explicitly documented. DocumentDB examples store vectors as numeric arrays alongside original data, and embedding guidance requires the same model for ingestion and querying. Concatenating title and description is a reasonable sample design choice.",
+      "grounding_source": "https://learn.microsoft.com/azure/search/vector-search-how-to-generate-embeddings; https://learn.microsoft.com/azure/documentdb/vector-search; documentdb-vector-search/vector-normalize-embeddings.md",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "The embedding-model fact is portable across stores; Azure AI Search index/API instructions from the dimension source are not applicable to DocumentDB.",
+      "build_risk": "None if only the model fact is reused and the DocumentDB index dimensions are also 1,536."
+    },
+    {
+      "question_id": "S03",
+      "question": "What IVF index definition should the small catalog use?",
+      "cold_answer": "createIndexes on embedding with cosmosSearch, vector-ivf, numLists=100, COS, dimensions=1536.",
+      "grounded_answer": "The shape, kind, metric, and dimensions are correct. For the review's roughly 20-product demonstration, official guidance recommends starting with numLists=1. Larger values must be selected from document count and validated for recall/latency; nProbes defaults to one.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/vector-search; https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "outcome": "partly_wrong",
+      "confused_with": "none",
+      "why_the_confusion_arose": "A plausible generic IVF example value was promoted to a catalog-specific recommendation without considering the tiny dataset or number of probed clusters.",
+      "build_risk": "Overpartitioning a tiny catalog with one probed cluster can reduce recall and jeopardize the expected top-10 results. A creation failure was not demonstrated."
+    },
+    {
+      "question_id": "S04",
+      "question": "How should the endpoint retrieve and project its top ten products?",
+      "cold_answer": "$search/cosmosSearch with vector, path=embedding, k=10, returnStoredSource=True, followed by searchScore projection.",
+      "grounded_answer": "This pipeline shape is documented for IVF and the Python quickstart confirms the equivalent PyMongo aggregation. The proposed projection omits embeddings. Use this verified syntax without making a broader claim that every $vectorSearch-shaped API is unsupported.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/vector-search; https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm",
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "The proposed retrieval path is correct; installed skill text and release notes disagree on broader $vectorSearch compatibility claims.",
+      "build_risk": "None from the proposed pipeline. Fewer than ten results remain possible if fewer than ten indexed products exist or the index is not ready."
+    },
+    {
+      "question_id": "S05",
+      "question": "Must ingestion precede IVF creation, and what Flask/JSON contract should be used?",
+      "cold_answer": "Populate embeddings before IVF creation so it establishes useful clusters; POST /search accepts query, embeds it, searches, and stringifies ObjectIds.",
+      "grounded_answer": "The official Python comparison sample inserts documents before creating indexes, so that workflow has a source-backed precedent. However, the general vector tutorial creates IVF before insertion, and neither source establishes a mandatory training-order rule. The selected POST contract and ObjectId serialization are application design decisions, not a verified DocumentDB-specific requirement.",
+      "grounding_source": "https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm; https://learn.microsoft.com/azure/documentdb/vector-search",
+      "outcome": "could_not_verify",
+      "confused_with": "unknown",
+      "why_the_confusion_arose": "General IVF training intuition was treated as a service requirement despite opposite ordering in official examples. The reviewed sources do not settle that causal claim.",
+      "build_risk": "Not central: seed-before-index with numLists=1 is a supported example workflow. Do not claim that opposite ordering is forbidden, and explicitly define and test the Flask JSON contract."
+    }
+  ],
+  "information_gaps": [
+    "No chosen managed cluster, application URI, database permissions, or confirmed firewall/private-network route is supplied. MCP discovery does not answer these application prerequisites.",
+    "No embedding provider is selected and no live ada-002 access or credentials are established. Public OpenAI is a disclosed review assumption, not a user requirement.",
+    "The inventory does not establish pip/venv, installed Python packages, or a tested dependency combination on Python 3.14.10.",
+    "The service-wide retryable-write capability remains contradictory across skills and official documentation, including false in the authentication URI table and true in its Python example. The Python vector quickstart does provide a usable false setting for this sample.",
+    "Official sources show both seed-before-IVF and IVF-before-seed ordering without explaining mandatory training behavior, rebuild requirements, or small-catalog clustering semantics.",
+    "The vector page says number[] is accepted but double[] is not, while its Python examples use float lists. A precise cross-language BSON encoding explanation is missing; use the provided Python list representation and validate indexed results rather than inventing a binary-vector requirement.",
+    "The catalog contents, license, HTTP request/response/error contract, dependency-pinning policy, and offline test acceptance criteria remain author choices. Roughly 20 synthetic products and POST JSON are reasonable disclosed assumptions.",
+    "Docker is installed, but the local image cache, daemon availability, running gateway, and exact managed/local feature parity are not established.",
+    "Current documentation and installed skills disagree on broader search capability boundaries. This is noncentral to the verified IVF pipeline, but agents should not infer that shared Atlas-style operator names prove either compatibility or incompatibility."
+  ],
+  "blockers": [],
+  "guidance_for_builder": [
+    "Start with an API-only Flask app against an existing managed cluster. Do not provision resources automatically. This run permits no writes; provide seed/index scripts for user-authorized execution and use mocked tests until credentials and permissions are configured.",
+    "Use one PyMongo MongoClient per process, the portal-issued mongodb+srv URI, TLS, and retryWrites=false for this vector sample. Override the installed connection/driver examples that use true. Sources: documentdb-driver/driver-singleton-client.md and https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm.",
+    "Do not use the connection skill's managed non-SRV port-10255 example. Official troubleshooting prescribes the portal SRV string and port 10260. Source: https://learn.microsoft.com/azure/documentdb/troubleshoot-common-issues.",
+    "For the approximately 20-product demonstration, create the requested vector-ivf index with embedding:'cosmosSearch', dimensions:1536, similarity:'COS', and numLists:1 rather than copying 100. Explain larger-catalog numLists/nProbes tuning. Source: https://learn.microsoft.com/azure/documentdb/vector-search.",
+    "Keep the verified $search/cosmosSearch pipeline with k=10 and project searchScore and product fields, excluding embeddings. Ensure at least ten successfully indexed products and account for index readiness. Sources: https://learn.microsoft.com/azure/documentdb/vector-search and https://learn.microsoft.com/azure/documentdb/quickstart-python-select-algorithm.",
+    "For optional current CLI instructions, use az documentdb mongocluster from the documentdb extension. The installed CLI 2.73.0 is below its 2.75.0 minimum; portal or generic ARM inspection is the immediate workaround. Source: https://learn.microsoft.com/cli/azure/documentdb/mongocluster.",
+    "For optional local tests, use ghcr.io/documentdb/documentdb/documentdb-local:latest on port 10260 with configured credentials and local TLS settings. Never propagate local certificate-validation relaxation to the managed URI. Sources: documentdb-local-deployment and https://learn.microsoft.com/azure/documentdb/development-loop.",
+    "Do not add lexical/hybrid search to satisfy this vector-only prompt. If later requested, use the new createSearchIndexes/BM25 path and arrange gated-preview access rather than presenting legacy $text/textScore as the current full-text engine. Source: https://learn.microsoft.com/azure/documentdb/full-text-search-overview.",
+    "Keep text-embedding-ada-002 for both ingestion and query generation, with a 1,536-element numeric vector. If Azure OpenAI is selected, model refers to the configured deployment name; public OpenAI uses the model name. Sources: https://learn.microsoft.com/azure/search/vector-search-how-to-generate-embeddings and https://learn.microsoft.com/azure/foundry-classic/openai/how-to/switching-endpoints.",
+    "Have the user enter database and embedding secrets locally, not in chat or agent-generated files. An existing MCP connection profile does not supply Flask's DOCUMENTDB_URI. Source: documentdb-mcp-setup."
+  ]
+}
