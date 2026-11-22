@@ -2,7 +2,7 @@
   "_comment": "MCP servers the pipeline may use. ${NAME} is read from the environment or .env. 'required': true makes the readiness gate block when the server does not answer. 'stages' limits which agents get the server's tools. 'documentation': true marks a public documentation search server; the audit warns when none answers.",
   "servers": {
     "documentdb": {
-      "purpose": "Azure DocumentDB data-plane tools: queries, aggregation, index management, schema inspection",
+      "purpose": "Azure DocumentDB data-plane tools: queries, aggregation, index management, schema inspection. Every tool call must pass connection_profile \"default\"",
       "required": false,
       "stages": ["readiness", "build"],
       "command": "npx",

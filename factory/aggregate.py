@@ -46,13 +46,13 @@ def aggregate(runs_dir: Path) -> str:
         if (run_dir / "run.json").exists():
             verdicts = json.loads((run_dir / "run.json").read_text(encoding="utf-8")).get("verdicts", {})
         verdict_rows.append(
-            f"| {sample} | {verdicts.get('prompt_review', '-')} | {verdicts.get('readiness', '-')} "
+            f"| {sample} | {verdicts.get('prompt_review', '-')} | {verdicts.get('readiness', '-')} | {verdicts.get('readiness_score', '-')} "
             f"| {verdicts.get('build', '-')} | {verdicts.get('audit', '-')} |"
         )
         if (run_dir / "02-readiness.json").exists():
             readiness = ReadinessReport.model_validate_json((run_dir / "02-readiness.json").read_text(encoding="utf-8"))
             for c in readiness.confusions:
-                if c.outcome in ("wrong", "partly_wrong"):
+                if c.outcome in ("wrong", "partly_wrong", "outdated"):
                     confused_with[c.confused_with] += 1
                     confusion_questions[f"{c.question_id} {c.question}"].append(sample)
                 elif c.outcome == "could_not_verify":
@@ -92,7 +92,7 @@ def aggregate(runs_dir: Path) -> str:
         return sorted(d.items(), key=lambda kv: -len(kv[1]))
 
     out = [f"# Gallery insights ({len(runs)} samples, latest run of each)", ""]
-    out += ["## Verdicts", "", "| Sample | Prompt | Readiness | Build | Audit |", "|---|---|---|---|---|", *verdict_rows, ""]
+    out += ["## Verdicts", "", "| Sample | Prompt | Readiness | Readiness score | Build | Audit |", "|---|---|---|---|---|---|", *verdict_rows, ""]
 
     out += ["## Reference requirements met from the starter prompt alone", ""]
     out += ["| Sample | Met |", "|---|---|", *requirement_rows, ""] if requirement_rows else ["No runs had a reference requirements file.", ""]
@@ -103,7 +103,7 @@ def aggregate(runs_dir: Path) -> str:
         out += ["None.", ""]
 
     out += ["## Which neighbouring service the model mistook this one for", ""]
-    out += [f"- `{k}`: {v} wrong answers" for k, v in confused_with.most_common()] or ["No confusions recorded."]
+    out += [f"- `{k}`: {v} wrong, partly wrong or outdated answers" for k, v in confused_with.most_common()] or ["No confusions recorded."]
     out += ["", "## Questions answered wrongly from memory", ""]
     out += [f"- {q} ({len(s)} samples)" for q, s in by_spread(confusion_questions)] or ["None."]
     out += ["", "## Questions no source could answer", ""]

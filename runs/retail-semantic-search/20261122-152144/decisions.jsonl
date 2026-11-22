@@ -1,0 +1,1 @@
+{"id":"D001","timestamp":"2026-11-22T23:29:22+00:00","stage":"readiness","decision":"I approved the build with readiness 'ready_with_gaps'","alternatives":["Stop and fix gaps first"],"reason":"Approved with --yes","reason_source":"operator","evidence":""}

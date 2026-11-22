@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ---------------------------------------------------------------- stage 1 --
 
@@ -55,8 +55,17 @@ ConfusedWith = Literal[
 
 class QuizAnswer(BaseModel):
     question_id: str
+    question: str = Field(description="The question being answered. For Q items, copy it from the quiz. For S items, write the question your answer responds to.")
     answer: str
     confidence: Literal["high", "medium", "low"]
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_files_without_question(cls, data):
+        # Cold answers saved before this field existed can still be loaded (for --resume).
+        if isinstance(data, dict) and "question" not in data:
+            data = {**data, "question": ""}
+        return data
 
 
 class ColdQuiz(BaseModel):
@@ -65,16 +74,42 @@ class ColdQuiz(BaseModel):
     answers: list[QuizAnswer]
 
 
+class Link(BaseModel):
+    title: str = Field(description="Page title, or the skill or tool name.")
+    url: str = Field(description="Copied exactly from a tool result or skill text. Empty if there is no public address. Never constructed.")
+
+
+def _fill_missing(data, defaults: dict):
+    """Let files written before a field existed still load (for --resume and aggregate)."""
+    if isinstance(data, dict):
+        missing = {k: v for k, v in defaults.items() if k not in data}
+        if missing:
+            data = {**data, **missing}
+    return data
+
+
 class Confusion(BaseModel):
     question_id: str
     question: str
     cold_answer: str
     grounded_answer: str
     grounding_source: str = Field(description="Skill name, doc URL or MCP tool the grounded answer came from. 'none found' if nothing.")
-    outcome: Literal["correct", "partly_wrong", "wrong", "could_not_verify"]
+    grounding_links: list[Link] = Field(description="Public pages or skills that state the grounded answer.")
+    outcome: Literal["correct", "outdated", "partly_wrong", "wrong", "could_not_verify"]
     confused_with: ConfusedWith
     why_the_confusion_arose: str = Field(description="The mechanism: shared name, shared namespace, renamed product, shared wire protocol, etc.")
+    confusion_sources: list[Link] = Field(
+        description="Public pages that state or show the cold answer, or that conflict with the grounded answer: old blog posts, Q&A threads, older reference pages, other products' docs."
+    )
     build_risk: str = Field(description="What would go wrong in the app if the cold answer were used.")
+    improvements: list[str] = Field(
+        description="Concrete changes to documentation, the agent kit or tooling that would stop this confusion recurring. Empty if correct."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _older_files(cls, data):
+        return _fill_missing(data, {"grounding_links": [], "confusion_sources": [], "improvements": []})
 
 
 class ToolReadiness(BaseModel):
@@ -85,17 +120,62 @@ class ToolReadiness(BaseModel):
     detail: str = Field(description="Version, tool count, or the error seen.")
     impact_if_missing: str
     workaround: str
+    references: list[Link] = Field(description="Public pages the workaround or setup relies on. Empty if none.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _older_files(cls, data):
+        return _fill_missing(data, {"references": []})
+
+
+class BuilderCorrection(BaseModel):
+    instruction: str = Field(description="One correction the builder must apply, stating the correct fact.")
+    sources: list[Link] = Field(description="Public pages or skills that state the fact.")
+
+
+class InformationGap(BaseModel):
+    title: str = Field(description="A short category, such as 'IVF parameter sizing' or 'Driver version support'.")
+    description: str = Field(description="What the builder needs to know that no skill, doc or tool answered, and where you looked.")
+
+
+class InventoryRecommendation(BaseModel):
+    name: str = Field(description="The inventory item that is missing, exactly as named in the inventory.")
+    worth_adding: bool = Field(description="True only if having it would materially help build or verify this kind of sample.")
+    recommendation: str = Field(
+        description="How to make it available, or how to make the agent kit or docs handle its absence. If not worth adding, say why in a few words."
+    )
+    references: list[Link]
 
 
 class ReadinessReport(BaseModel):
     verdict: Literal["ready", "ready_with_gaps", "blocked"]
     summary: str
+    summary_points: list[str] = Field(description="The summary as 3 to 7 short bullet points, most important first.")
     tools: list[ToolReadiness]
     accelerators_missed: list[str] = Field(description="Tools or skills that exist and would speed this build up but are not installed.")
     confusions: list[Confusion]
-    information_gaps: list[str] = Field(description="Things the builder needs to know that no skill, doc or tool answered.")
+    information_gaps: list[InformationGap] = Field(description="Things the builder needs to know that no skill, doc or tool answered.")
     blockers: list[str]
-    guidance_for_builder: list[str] = Field(description="Concrete corrections the builder must apply, drawn from the confusions.")
+    guidance_for_builder: list[BuilderCorrection] = Field(description="Concrete corrections the builder must apply, drawn from the confusions.")
+    inventory_recommendations: list[InventoryRecommendation] = Field(
+        description="One entry for every command-line tool or MCP server the inventory reports as unavailable."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _older_files(cls, data):
+        if not isinstance(data, dict):
+            return data
+        data = _fill_missing(data, {"inventory_recommendations": []})
+        if "summary_points" not in data:
+            data = {**data, "summary_points": [data.get("summary", "")] if data.get("summary") else []}
+        data["information_gaps"] = [
+            {"title": "", "description": g} if isinstance(g, str) else g for g in data.get("information_gaps", [])
+        ]
+        data["guidance_for_builder"] = [
+            {"instruction": g, "sources": []} if isinstance(g, str) else g for g in data.get("guidance_for_builder", [])
+        ]
+        return data
 
 
 # ---------------------------------------------------------------- stage 3 --
@@ -199,6 +279,7 @@ Availability = Literal[
 
 
 class PracticeCheck(BaseModel):
+    topic: str = Field(description="A short title for the practice, 2 to 6 words, such as 'Connection client reuse'.")
     practice: str
     category: str
     availability: Availability
@@ -209,6 +290,17 @@ class PracticeCheck(BaseModel):
     source: str = Field(description="Page title or skill name. 'checklist only' if no public source backs it.")
     searched: str = Field(description="For not_assessable: what was searched and what was missing.")
     fix: str = Field(description="For violated: the change to make. Otherwise empty.")
+    sources: list[Link] = Field(description="Every public page or skill that states the practice. Empty if none was found.")
+    what_would_help: str = Field(
+        description="For prior_knowledge_only and listed_not_found: the public information that would have let an agent confirm or correct this. Otherwise empty."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _older_files(cls, data):
+        if isinstance(data, dict) and "topic" not in data:
+            data = {**data, "topic": data.get("category", "")}
+        return _fill_missing(data, {"sources": [], "what_would_help": ""})
 
 
 class DecisionReview(BaseModel):

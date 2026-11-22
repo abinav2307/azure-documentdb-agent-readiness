@@ -1,1 +1,6 @@
-Using the Azure DocumentDB skill, build a Python Flask app with a product catalog stored in DocumentDB. Embed product titles and descriptions using text-embedding-ada-002, create a vector-ivf index, and expose a /search endpoint that takes a natural language query, embeds it, and returns the top 10 semantically similar products.
+
+Using the Azure DocumentDB skill, build a Node.js LlamaIndex agent that reads co-purchase order history from Azure DocumentDB, generates product embeddings, stores them in a DiskANN index, and uses agent memory to personalise recommendations per session. The agent should accept a product ID and return the top 5 recommended items with reasoning.
+The app should include a script to ingest 20,000 product purchase transactions. 
+
+Use a config file for the Azure DocumentDB connection string and display a clear error if the connection string is missing or invalid. Keep the code as simple and readable as possible.
+Can you add detailed comments before each method to make code readability by others as easy as possible?

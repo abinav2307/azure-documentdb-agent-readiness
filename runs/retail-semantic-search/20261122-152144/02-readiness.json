@@ -1,0 +1,1026 @@
+{
+  "verdict": "ready_with_gaps",
+  "summary": "The build can start against an existing M30-or-higher cluster using the installed DocumentDB skills, MongoDB Node.js driver, and MCP tools. DiskANN indexing and retrieval are documented. End-to-end execution still needs locally supplied database and model credentials, dependency-version checks, and explicit LlamaIndex session-memory wiring. The largest product friction is inconsistent guidance: current Learn pages and installed skills disagree on deployment API versions, retryable writes, endpoints, and full-text search. No resources or data were changed.",
+  "summary_points": [
+    "The build can start with the prompt review’s existing-cluster, local CLI, and synthetic-data assumptions.",
+    "DiskANN requires M30 or higher, and its index and query syntax are verified.",
+    "The documented LlamaIndex vector-store connector is Python-only; this Node.js app should expose MongoDB-driver retrieval through an agent tool.",
+    "Database configuration, model credentials, and the exact LlamaIndex dependency and memory APIs remain unverified.",
+    "Current documentation conflicts with installed skills on API versions, retryable writes, endpoint examples, and text-search recommendations.",
+    "Missing infrastructure CLIs and mongosh do not prevent this sample because provisioning is out of scope and driver/MCP alternatives exist."
+  ],
+  "tools": [
+    {
+      "name": "node",
+      "kind": "cli",
+      "needed_for": "Run the Node.js recommendation agent and ingestion script.",
+      "available": true,
+      "detail": "Inventory reports v26.13.0; the DocumentDB Node.js quickstart requires Node.js 22 or newer.",
+      "impact_if_missing": "Neither application nor ingestion script can run.",
+      "workaround": "The installed runtime meets the documented database prerequisite. Check the selected LlamaIndex packages’ engine constraints before pinning dependencies.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ]
+    },
+    {
+      "name": "npm",
+      "kind": "cli",
+      "needed_for": "Install and lock application dependencies and run package scripts.",
+      "available": false,
+      "detail": "Not separately checked by the inventory; npx 11.20.0 is present, but that is not a direct verification of the npm command.",
+      "impact_if_missing": "The documented dependency-installation workflow cannot run.",
+      "workaround": "Verify npm locally before building; restore the Node.js package-manager installation if needed. Do not interpret this unverified status as an inventory-confirmed absence.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ]
+    },
+    {
+      "name": "npx",
+      "kind": "cli",
+      "needed_for": "Maintain agent skills and launch the dedicated DocumentDB MCP server.",
+      "available": true,
+      "detail": "11.20.0.",
+      "impact_if_missing": "Convenient skill installation and upstream MCP launch are unavailable.",
+      "workaround": "Use the already configured MCP server; its setup skill also describes launching a locally built server with node.",
+      "references": [
+        {
+          "title": "DocumentDB MCP server",
+          "url": "https://github.com/microsoft/documentdb-mcp"
+        }
+      ]
+    },
+    {
+      "name": "git",
+      "kind": "cli",
+      "needed_for": "Source control and upstream GitHub-based MCP installation.",
+      "available": true,
+      "detail": "2.56.1.windows.1.",
+      "impact_if_missing": "GitHub-based npx installation and repository workflows become harder.",
+      "workaround": "The existing MCP configuration does not need reinstalling; source files can still be prepared without source-control operations.",
+      "references": [
+        {
+          "title": "DocumentDB MCP server",
+          "url": "https://github.com/microsoft/documentdb-mcp"
+        }
+      ]
+    },
+    {
+      "name": "mongodb Node.js driver",
+      "kind": "other",
+      "needed_for": "Read orders, ingest transactions, create DiskANN indexes, query candidates, and optionally store session state.",
+      "available": false,
+      "detail": "Project package installation and version are not covered by the inventory.",
+      "impact_if_missing": "The app has no supported database data-access client.",
+      "workaround": "Install mongodb through npm and pin a version compatible with the chosen runtime and LlamaIndex packages. Reuse one MongoClient per process.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ]
+    },
+    {
+      "name": "LlamaIndex JavaScript/TypeScript and model-provider packages",
+      "kind": "other",
+      "needed_for": "Construct the requested agent, invoke embeddings and chat, and manage conversational context.",
+      "available": false,
+      "detail": "No application dependency inventory or installed LlamaIndex skill was supplied.",
+      "impact_if_missing": "Database retrieval alone does not satisfy the LlamaIndex-agent requirement.",
+      "workaround": "Select and pin compatible JavaScript packages. Use a custom agent retrieval tool backed by mongodb rather than attempting to install the Python-only DocumentDB vector-store connector.",
+      "references": [
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        }
+      ]
+    },
+    {
+      "name": "Azure DocumentDB application connection configuration",
+      "kind": "credential",
+      "needed_for": "Authenticate the application and ingestion script to the existing managed cluster.",
+      "available": false,
+      "detail": "The inventory confirms a configured MCP server, not an application-readable connection file or database write/index privileges.",
+      "impact_if_missing": "The agent cannot read history or execute ingestion and index setup.",
+      "workaround": "Have the user populate an uncommitted local config file directly, never through chat. Use the portal-provided URI and verify connect plus ping, network access, and required database privileges before ingestion.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "documentdb-mcp-setup",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/mcp-setup/SKILL.md"
+        }
+      ]
+    },
+    {
+      "name": "Embedding and chat provider credentials",
+      "kind": "credential",
+      "needed_for": "Generate product embeddings and agent explanations.",
+      "available": false,
+      "detail": "No OpenAI key, Azure OpenAI deployments, or model access was verified.",
+      "impact_if_missing": "Live embedding generation and LLM-backed reasoning cannot run.",
+      "workaround": "Have the user configure provider credentials locally. The LlamaIndex guide documents Azure OpenAI settings and an OpenAI alternative; do not create model resources under this run policy.",
+      "references": [
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        }
+      ]
+    },
+    {
+      "name": "documentdb",
+      "kind": "mcp_server",
+      "needed_for": "Inspect schemas, indexes, document counts, and retrieval results during later verification.",
+      "available": true,
+      "detail": "Inventory reports 18 tools. Every call must pass connection_profile=\"default\". Availability does not establish the target cluster’s tier.",
+      "impact_if_missing": "Agent-side inspection is less convenient, but the application can still use the MongoDB driver.",
+      "workaround": "Use equivalent driver queries, listIndexes, counts, and explain operations. Keep readiness calls read-only and avoid $out/$merge.",
+      "references": [
+        {
+          "title": "Azure DocumentDB MCP Toolkit",
+          "url": "https://learn.microsoft.com/azure/documentdb/mcp-toolkit#key-features"
+        }
+      ]
+    },
+    {
+      "name": "learn",
+      "kind": "mcp_server",
+      "needed_for": "Check current connection, compatibility, vector-search, and framework guidance.",
+      "available": true,
+      "detail": "Inventory reports three search, fetch, and code-sample tools.",
+      "impact_if_missing": "The builder is more likely to inherit stale skill examples.",
+      "workaround": "Read the named first-party pages directly and compare them with installed skills.",
+      "references": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        }
+      ]
+    },
+    {
+      "name": "azure",
+      "kind": "mcp_server",
+      "needed_for": "Optional read-only cluster metadata inspection and Azure documentation/best-practice lookups.",
+      "available": true,
+      "detail": "Inventory reports 74 tools; the dedicated DocumentDB server remains the data-plane tool.",
+      "impact_if_missing": "Control-plane inspection is less convenient, not a build blocker.",
+      "workaround": "Use az resource inspection or the portal for the existing cluster; use documentdb for collection operations.",
+      "references": [
+        {
+          "title": "Quickstart: Create an Azure DocumentDB cluster by using Azure CLI",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-cli#view-the-cluster"
+        }
+      ]
+    },
+    {
+      "name": "az",
+      "kind": "cli",
+      "needed_for": "Optional inspection of the existing cluster’s tier, network configuration, and authentication settings.",
+      "available": true,
+      "detail": "Azure CLI 2.73.0; cosmosdb-preview 1.7.0 is installed, but the current documentdb extension is not listed.",
+      "impact_if_missing": "Cluster metadata must be checked through the portal or Azure MCP.",
+      "workaround": "For service-specific commands, install/update the documentdb extension. Generic az resource inspection avoids depending on that extension. No provisioning is requested.",
+      "references": [
+        {
+          "title": "Quickstart: Create an Azure DocumentDB cluster by using Azure CLI",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-cli#create-an-azure-documentdb-cluster"
+        }
+      ]
+    },
+    {
+      "name": "az login",
+      "kind": "credential",
+      "needed_for": "Optional Azure control-plane inspection or Entra authentication if the builder chooses it.",
+      "available": true,
+      "detail": "Inventory confirms a signed-in subscription and tenant. This is not proof of DocumentDB data-plane permissions or model access.",
+      "impact_if_missing": "Authenticated control-plane checks and Azure CLI-backed token acquisition fail.",
+      "workaround": "Native database credentials can support this sample independently; otherwise configure the appropriate Entra database principal and access.",
+      "references": [
+        {
+          "title": "Connect to Azure DocumentDB using role-based access control and Microsoft Entra ID",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control"
+        }
+      ]
+    },
+    {
+      "name": "documentdb-vector-search",
+      "kind": "skill",
+      "needed_for": "DiskANN tier selection, index options, embedding dimensions, and candidate retrieval.",
+      "available": true,
+      "detail": "Loaded index-creation and kNN resources; they document M30+, numeric vectors, and lSearch >= k.",
+      "impact_if_missing": "The builder could use Atlas syntax or incompatible dimensions.",
+      "workaround": "Use the official vector-search page.",
+      "references": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        }
+      ]
+    },
+    {
+      "name": "documentdb-connection",
+      "kind": "skill",
+      "needed_for": "TLS, native authentication, bounded connection failures, and client reuse.",
+      "available": true,
+      "detail": "Loaded. Recommends retryWrites=false; other installed and public examples conflict.",
+      "impact_if_missing": "Connection errors may be opaque or the app may create a client per request.",
+      "workaround": "Follow the Node.js quickstart’s native-authentication URI and explicit connect/ping validation.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ]
+    },
+    {
+      "name": "documentdb-driver",
+      "kind": "skill",
+      "needed_for": "One process-wide MongoClient and connection reuse.",
+      "available": true,
+      "detail": "Loaded singleton resource; its retryWrites=true example conflicts with the connection skill and native-authentication quickstart.",
+      "impact_if_missing": "Per-invocation clients can cause unnecessary handshakes and pool growth.",
+      "workaround": "Keep the singleton pattern, but do not copy its retryWrites=true setting into this native-authenticated vector sample.",
+      "references": [
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ]
+    },
+    {
+      "name": "documentdb-data-modeling",
+      "kind": "skill",
+      "needed_for": "Bounded order arrays, product references, and session-document size discipline.",
+      "available": true,
+      "detail": "Loaded; supplies modeling principles, not a retail schema or memory policy.",
+      "impact_if_missing": "The builder could embed unbounded history or mix unrelated session state.",
+      "workaround": "Use the review’s separate products/orders collections and explicitly bounded per-session memory.",
+      "references": [
+        {
+          "title": "documentdb-data-modeling",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md"
+        }
+      ]
+    },
+    {
+      "name": "documentdb-indexing",
+      "kind": "skill",
+      "needed_for": "Order-product multikey indexes and optional unique session identifiers.",
+      "available": true,
+      "detail": "Loaded multikey resource; array fields create multikey indexes.",
+      "impact_if_missing": "Co-purchase lookup can scan all 20,000 orders.",
+      "workaround": "Create an index on the actual order product-ID path and verify the query plan later.",
+      "references": [
+        {
+          "title": "MongoDB Query Language compatibility in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language"
+        }
+      ]
+    },
+    {
+      "name": "documentdb-natural-language-querying",
+      "kind": "skill",
+      "needed_for": "Generate and review the co-purchase aggregation and safely inspect schema.",
+      "available": true,
+      "detail": "Loaded; supports match, unwind, group, and sum patterns and requires the available DocumentDB MCP.",
+      "impact_if_missing": "The builder has less guidance on aggregation shape and safe schema sampling.",
+      "workaround": "Use the compatibility matrix and driver-based read-only queries against the chosen schema.",
+      "references": [
+        {
+          "title": "MongoDB Query Language compatibility in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language"
+        }
+      ]
+    },
+    {
+      "name": "documentdb-local-deployment",
+      "kind": "skill",
+      "needed_for": "Uncommitted configuration examples, repeatable seed scripts, and optional local tests.",
+      "available": true,
+      "detail": "Loaded configuration and sample-data resources. One environment example invents a different host suffix than the managed-service quickstart.",
+      "impact_if_missing": "Seed reruns may duplicate data and local TLS relaxation may leak into managed connections.",
+      "workaround": "Keep secrets uncommitted, use idempotent seeds, and copy the managed URI from the portal instead of the skill’s production host example.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "Tutorial: Build a TypeScript app with DocumentDB and deploy to Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/development-loop"
+        }
+      ]
+    },
+    {
+      "name": "docker",
+      "kind": "cli",
+      "needed_for": "Optional isolated local tests of CRUD and ingestion.",
+      "available": true,
+      "detail": "29.9.3. Docker availability does not establish that the DocumentDB image is pulled or that local DiskANN matches the managed service.",
+      "impact_if_missing": "Optional local database tests cannot run.",
+      "workaround": "Test against the user-supplied managed M30+ cluster after obtaining execution authorization; do not substitute a Cosmos DB emulator.",
+      "references": [
+        {
+          "title": "Tutorial: Build a TypeScript app with DocumentDB and deploy to Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/development-loop"
+        }
+      ]
+    },
+    {
+      "name": "mongosh",
+      "kind": "cli",
+      "needed_for": "Optional manual connection and index checks.",
+      "available": false,
+      "detail": "Inventory reports not found on PATH.",
+      "impact_if_missing": "Shell examples cannot be executed directly.",
+      "workaround": "Use the installed DocumentDB MCP for inspection and MongoClient Db.command/collection methods for application setup.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ]
+    }
+  ],
+  "accelerators_missed": [
+    "Current Azure DocumentDB CLI extension: the inventory lists cosmosdb-preview, not documentdb. The current CLI quickstart supplies `az extension add --name documentdb --upgrade`; this would simplify read-only cluster inspection.",
+    "Local DocumentDB container is not confirmed installed or running. Docker is present; the development-loop tutorial documents `docker pull ghcr.io/documentdb/documentdb/documentdb-local:latest`. It can accelerate isolated CRUD tests, but managed DiskANN parity must not be assumed."
+  ],
+  "confusions": [
+    {
+      "question_id": "Q01",
+      "question": "What is the Azure resource provider namespace and resource type of an Azure DocumentDB cluster?",
+      "cold_answer": "The provider namespace is Microsoft.DocumentDB, and the cluster resource type is Microsoft.DocumentDB/mongoClusters.",
+      "grounded_answer": "Correct: Microsoft.DocumentDB is the provider namespace and Microsoft.DocumentDB/mongoClusters is the managed cluster resource type.",
+      "grounding_source": "documentdb-azure-deployment; Bicep quickstart",
+      "grounding_links": [
+        {
+          "title": "Quickstart: Deploy an Azure DocumentDB cluster using Bicep",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No confusion observed despite the resource provider retaining the shared DocumentDB namespace.",
+      "confusion_sources": [],
+      "build_risk": "None.",
+      "improvements": []
+    },
+    {
+      "question_id": "Q02",
+      "question": "Which Azure CLI command group creates and manages a cluster? Is it in the core CLI or an extension?",
+      "cold_answer": "Use az cosmosdb mongocluster from the cosmosdb-preview extension.",
+      "grounded_answer": "The current quickstart uses az documentdb mongocluster from the documentdb extension and installs it with az extension add --name documentdb --upgrade.",
+      "grounding_source": "learn_microsoft_docs_fetch: CLI quickstart",
+      "grounding_links": [
+        {
+          "title": "Quickstart: Create an Azure DocumentDB cluster by using Azure CLI",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-cli#create-an-azure-documentdb-cluster"
+        }
+      ],
+      "outcome": "outdated",
+      "confused_with": "legacy_vcore_naming",
+      "why_the_confusion_arose": "The answer retains the former Cosmos DB command namespace and extension; the inventory also installs that legacy extension rather than the current one.",
+      "confusion_sources": [],
+      "build_risk": "The builder may use obsolete command guidance or fail to discover current cluster inspection commands; provisioning is not required here.",
+      "improvements": [
+        "Update documentdb-azure-deployment to lead with az documentdb mongocluster and the documentdb extension.",
+        "Add a legacy-command migration note to the CLI quickstart and an extension-version check to the deployment skill."
+      ]
+    },
+    {
+      "question_id": "Q03",
+      "question": "Which Bicep and Terraform resource types deploy a cluster?",
+      "cold_answer": "Bicep Microsoft.DocumentDB/mongoClusters@2024-07-01; Terraform azurerm_mongo_cluster, or azapi_resource targeting the same 2024-07-01 type.",
+      "grounded_answer": "The resource types are correct, but the current Bicep quickstart uses Microsoft.DocumentDB/mongoClusters@2026-06-01. The Terraform quickstart uses azurerm_mongo_cluster with AzureRM ~>4.0. The installed deployment skill still recommends API 2025-09-01.",
+      "grounding_source": "learn_microsoft_docs_fetch: Bicep and Terraform quickstarts",
+      "grounding_links": [
+        {
+          "title": "Quickstart: Deploy an Azure DocumentDB cluster using Bicep",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep"
+        },
+        {
+          "title": "Quickstart: Deploy an Azure DocumentDB cluster using Terraform",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-terraform"
+        }
+      ],
+      "outcome": "outdated",
+      "confused_with": "legacy_vcore_naming",
+      "why_the_confusion_arose": "Stable resource names conceal API evolution; old examples and even the installed skill pin earlier versions.",
+      "confusion_sources": [
+        {
+          "title": "documentdb-azure-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/azure-deployment/SKILL.md"
+        }
+      ],
+      "build_risk": "Optional infrastructure files could omit newer properties or perpetuate obsolete APIs; this sample does not require infrastructure.",
+      "improvements": [
+        "Synchronize documentdb-azure-deployment and its templates with the API used by the current Bicep quickstart.",
+        "Document the difference between a supported older API and the recommended quickstart API in the deployment skill."
+      ]
+    },
+    {
+      "question_id": "Q04",
+      "question": "What does a connection string look like: scheme, host suffix, port, and the options it must carry?",
+      "cold_answer": "mongodb+srv://<username>:<url-encoded-password>@<cluster>.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false&maxIdleTimeMS=120000; no explicit SRV port; allow TCP 10260.",
+      "grounded_answer": "This is a supported cluster-specific form, and the rename did not change existing URIs. The current Node.js quickstart shows the global form <cluster>.global.mongocluster.cosmos.azure.com with TLS, SCRAM-SHA-256, retrywrites=false, and maxIdleTimeMS=120000. Default connectivity uses 10260; query-from-any-node can require additional SRV-advertised ports. Copy the actual portal URI rather than synthesizing a host. Sources disagree on retryable-write support, but the native-authenticated vector sample’s documented setting is false.",
+      "grounding_source": "Node.js quickstart; FAQ; connectivity and query-from-any-node documentation",
+      "grounding_links": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "Frequently asked questions about Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/faq#how-does-azure-documentdb-relate-to-azure-cosmos-db"
+        },
+        {
+          "title": "Query from any node in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-from-any-node#how-query-from-any-node-works"
+        }
+      ],
+      "outcome": "outdated",
+      "confused_with": "legacy_vcore_naming",
+      "why_the_confusion_arose": "The former host suffix is deliberately retained, while current quickstarts favor a global endpoint. Retry settings disagree across native-authentication, OIDC, migration, and skill examples.",
+      "confusion_sources": [
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        },
+        {
+          "title": "Build a Node.js console app with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-build-nodejs-console-app#configure-your-console-application"
+        },
+        {
+          "title": "Migrate from Amazon DocumentDB: Update your application",
+          "url": "https://learn.microsoft.com/azure/documentdb/migrate-amazon-documentdb#update-your-application"
+        },
+        {
+          "title": "documentdb-local-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/local-deployment/SKILL.md"
+        }
+      ],
+      "build_risk": "A constructed host can fail DNS resolution, copying retryWrites=true can conflict with vector guidance, and a port-only firewall assumption can fail on multi-node configurations.",
+      "improvements": [
+        "Add one canonical connection-options table to the Node.js quickstart, separating native authentication, OIDC, and topology-specific ports.",
+        "Reconcile retryWrites examples in the Node.js OIDC page, Amazon migration page, and documentdb-driver resource.",
+        "Replace the mongocluster.documentdb.azure.com production example in local-env-driven-config.md with a portal-URI placeholder."
+      ]
+    },
+    {
+      "question_id": "Q05",
+      "question": "How is capacity provisioned and billed?",
+      "cold_answer": "Compute tiers with vCores and memory, storage, shard count, and optional HA; not RU/s.",
+      "grounded_answer": "Correct: Azure DocumentDB uses dedicated vCore-based compute and storage, not the RU throughput model.",
+      "grounding_source": "Overview and FAQ",
+      "grounding_links": [
+        {
+          "title": "What is Azure DocumentDB?",
+          "url": "https://learn.microsoft.com/azure/documentdb/overview#lower-cost-than-mongodb-atlas"
+        },
+        {
+          "title": "Frequently asked questions about Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/faq#how-does-azure-documentdb-relate-to-azure-cosmos-db"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No RU-based sibling confusion observed.",
+      "confusion_sources": [],
+      "build_risk": "None; actual M30+ target availability remains to be checked.",
+      "improvements": []
+    },
+    {
+      "question_id": "Q06",
+      "question": "Which authentication methods are supported, and how does a driver authenticate with Microsoft Entra ID?",
+      "cold_answer": "Native SCRAM-SHA-256 or Entra ID via MONGODB-OIDC, authSource=$external, and a Node.js OIDC_CALLBACK returning accessToken and expiresInSeconds from the ossrdbms-aad.database.windows.net/.default scope.",
+      "grounded_answer": "Native authentication and Microsoft Entra OIDC are supported. The Node.js guide confirms MONGODB-OIDC, OIDC_CALLBACK, the stated token scope, and accessToken/expiresInSeconds. Its JavaScript callback converts the expiry timestamp into remaining seconds. Azure resource RBAC alone is not database access.",
+      "grounding_source": "Node.js console-app guide; Entra access guide",
+      "grounding_links": [
+        {
+          "title": "Build a Node.js console app with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-build-nodejs-console-app#configure-your-console-application"
+        },
+        {
+          "title": "Connect using Microsoft Entra ID",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No protocol confusion observed; the token is passed through OIDC, not SCRAM.",
+      "confusion_sources": [],
+      "build_risk": "Do not copy the TypeScript expiry arithmetic literally: it mixes milliseconds and seconds. Native authentication is the simpler reviewed assumption.",
+      "improvements": []
+    },
+    {
+      "question_id": "Q07",
+      "question": "Which client library should an application use? Is there a service-specific SDK?",
+      "cold_answer": "Use the standard mongodb Node.js driver and MongoClient; no separate DocumentDB data-plane SDK or Cosmos DB NoSQL SDK.",
+      "grounded_answer": "Correct: the quickstart installs mongodb and uses MongoClient, Db, and Collection.",
+      "grounding_source": "Node.js quickstart",
+      "grounding_links": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No shared-brand SDK confusion observed.",
+      "confusion_sources": [],
+      "build_risk": "None.",
+      "improvements": []
+    },
+    {
+      "question_id": "Q08",
+      "question": "Which vector index types are supported, and what does the command that creates one look like?",
+      "cold_answer": "IVF, HNSW, and DiskANN; createIndexes with key embedding:'cosmosSearch', kind:'vector-diskann', dimensions:1536, similarity:'COS', maxDegree:32, lBuild:64.",
+      "grounded_answer": "Correct: all three kinds are documented. The createIndexes shape is valid, lBuild=64 is within the documented 10–500 range and appears in a Learn example, and dimensions must match embeddings. DiskANN requires M30+.",
+      "grounding_source": "documentdb-vector-search; fetched vector-search page",
+      "grounding_links": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No Atlas index-syntax confusion observed.",
+      "confusion_sources": [],
+      "build_risk": "The definition still fails the sample requirement if used on a tier below M30.",
+      "improvements": []
+    },
+    {
+      "question_id": "Q09",
+      "question": "How are full-text search and hybrid search done?",
+      "cold_answer": "Create community text indexes, query with $text and textScore, and fuse text/vector results with application-side RRF.",
+      "grounded_answer": "The current recommended full-text path is preview BM25 search using createSearchIndexes and $search, with searchScore. Enable full-text search before use. Hybrid search combines BM25 and cosmosSearch results using RRF, either in application code or server-side with $unionWith. The compatibility matrix still lists community text indexes and $text as supported.",
+      "grounding_source": "documentdb-full-text-search; hybrid-search page; MQL compatibility matrix",
+      "grounding_links": [
+        {
+          "title": "Hybrid search",
+          "url": "https://learn.microsoft.com/azure/documentdb/full-text-search-hybrid"
+        },
+        {
+          "title": "documentdb-full-text-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/full-text-search/SKILL.md"
+        }
+      ],
+      "outcome": "outdated",
+      "confused_with": "mongodb_atlas_or_server",
+      "why_the_confusion_arose": "Generic MongoDB text syntax remains documented as supported, while the new search engine uses a different index command and scoring path; installed skills also disagree.",
+      "confusion_sources": [
+        {
+          "title": "MongoDB Query Language compatibility in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language"
+        },
+        {
+          "title": "documentdb-natural-language-querying",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/natural-language-querying/SKILL.md"
+        },
+        {
+          "title": "documentdb-indexing",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/indexing/SKILL.md"
+        }
+      ],
+      "build_risk": "Adding lexical retrieval from memory could use the wrong scoring path or miss preview enablement. The requested product-ID sample does not need full-text search.",
+      "improvements": [
+        "Add a supported-versus-recommended distinction beside $text in the MQL compatibility matrix.",
+        "Align documentdb-indexing and documentdb-natural-language-querying with createSearchIndexes guidance.",
+        "Add full-text preview enablement prerequisites to documentdb-full-text-search."
+      ]
+    },
+    {
+      "question_id": "Q10",
+      "question": "Which MongoDB wire protocol or server versions are supported, and which commonly used features are not?",
+      "cold_answer": "Target 7.0; choices include 5.0–8.0; avoid mapReduce, server-side JavaScript, cross-shard transactions, and unrestricted administration; use cosmosSearch instead of Atlas vector syntax.",
+      "grounded_answer": "Versions 5.0, 6.0, 7.0, and 8.0 are documented; current quickstarts select 8.0. The compatibility matrix treats mapReduce as deprecated and JavaScript operators as deprecated in 8.0. Cross-shard multi-document ACID transactions are supported according to the Atlas comparison. Managed administration is restricted and vector retrieval uses cosmosSearch.",
+      "grounding_source": "Compatibility matrix; Atlas comparison; Node.js quickstart",
+      "grounding_links": [
+        {
+          "title": "MongoDB Query Language compatibility in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language"
+        },
+        {
+          "title": "Compare Azure DocumentDB to MongoDB Atlas",
+          "url": "https://learn.microsoft.com/azure/documentdb/compare-mongodb-atlas#compatibility-and-licensing"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ],
+      "outcome": "partly_wrong",
+      "confused_with": "legacy_vcore_naming",
+      "why_the_confusion_arose": "The version range is remembered correctly, but an older compatibility-limit assumption persists after broader transaction support and newer quickstart defaults.",
+      "confusion_sources": [],
+      "build_risk": "The builder may unnecessarily avoid atomic multi-shard designs or publish an obsolete version recommendation; the reviewed sample is single-shard.",
+      "improvements": [
+        "Add a dated transaction-support statement to compatibility-features with a link to the Atlas comparison.",
+        "Add an agent-kit rule to derive version defaults and restrictions from current quickstarts and the compatibility matrix."
+      ]
+    },
+    {
+      "question_id": "Q11",
+      "question": "How do you run the database locally: which image or emulator, and which port?",
+      "cold_answer": "docker run --rm -p 10260:10260 ghcr.io/microsoft/documentdb/documentdb-local:latest; connect to localhost:10260; not the Cosmos DB emulator.",
+      "grounded_answer": "Use ghcr.io/documentdb/documentdb/documentdb-local:latest, with the MongoDB gateway on 10260. The tutorial passes username/password and enables TLS for the self-signed local certificate. The same gateway image exposes PostgreSQL separately on 9712. This is the open-source engine, not a managed-service emulator.",
+      "grounding_source": "documentdb-local-deployment; development-loop tutorial",
+      "grounding_links": [
+        {
+          "title": "Tutorial: Build a TypeScript app with DocumentDB and deploy to Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/development-loop"
+        },
+        {
+          "title": "documentdb-local-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/local-deployment/SKILL.md"
+        }
+      ],
+      "outcome": "wrong",
+      "confused_with": "open_source_documentdb",
+      "why_the_confusion_arose": "The answer blends the earlier Microsoft repository ownership with the current GHCR organization and omits the local gateway’s authentication/TLS setup.",
+      "confusion_sources": [],
+      "build_risk": "The image pull can fail; a bare unauthenticated connection can fail even if a container starts.",
+      "improvements": [
+        "Add an explicit old-versus-current image-name note to documentdb-local-deployment.",
+        "Provide one copyable local MongoDB gateway setup with credentials, TLS, loopback binding, and a managed-parity caveat."
+      ]
+    },
+    {
+      "question_id": "Q12",
+      "question": "Are change streams supported, and does anything have to be enabled first?",
+      "cold_answer": "Yes; enable an opt-in cluster feature named EnableChangeStreams before collection.watch(), and persist resume tokens.",
+      "grounded_answer": "Change streams and resume tokens are documented. The current guide opens ordinary streams directly with watch(); it separately requires enabling the preview 'Change streams for multishard clusters' feature for multishard use, and collection-level options for pre-images/updateDescription. The searched sources did not substantiate a universal feature named EnableChangeStreams.",
+      "grounding_source": "Fetched change-streams guide",
+      "grounding_links": [
+        {
+          "title": "Change streams in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/change-streams#limitations"
+        }
+      ],
+      "outcome": "partly_wrong",
+      "confused_with": "unknown",
+      "why_the_confusion_arose": "A remembered opt-in flag is generalized across ordinary, multishard, and field-description change-stream capabilities.",
+      "confusion_sources": [
+        {
+          "title": "Azure DocumentDB release notes",
+          "url": "https://learn.microsoft.com/azure/documentdb/release-notes"
+        }
+      ],
+      "build_risk": "The builder could attempt an undocumented feature toggle or believe all watch calls require cluster changes. This sample does not need change streams.",
+      "improvements": [
+        "Add a prerequisites table to change-streams separating ordinary streams, multishard preview, pre-images, and updateDescription.",
+        "Replace blanket preview-enablement language in release notes with links to feature-specific instructions."
+      ]
+    },
+    {
+      "question_id": "Q13",
+      "question": "Which MCP server provides data-plane tools? Does the general Azure MCP cover it?",
+      "cold_answer": "Use microsoft/documentdb-mcp with the cluster URI; do not rely on general Azure MCP for DocumentDB collection/vector queries.",
+      "grounded_answer": "Correct: the dedicated server supplies collection queries, aggregation, and index operations. Configure credentials in administrator-controlled CONNECTION_PROFILES and pass connection_profile='default' for this inventory. The returned Azure tool inventory does not supply those dedicated data-plane operations.",
+      "grounding_source": "documentdb-mcp-setup; machine inventory; MCP Toolkit documentation",
+      "grounding_links": [
+        {
+          "title": "documentdb-mcp-setup",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/mcp-setup/SKILL.md"
+        },
+        {
+          "title": "DocumentDB MCP server",
+          "url": "https://github.com/microsoft/documentdb-mcp"
+        },
+        {
+          "title": "Azure DocumentDB MCP Toolkit",
+          "url": "https://learn.microsoft.com/azure/documentdb/mcp-toolkit#key-features"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No confusion between Azure control-plane and dedicated data-plane tools observed.",
+      "confusion_sources": [],
+      "build_risk": "Never pass the URI as a runtime tool argument or assume MCP credentials are available to the app.",
+      "improvements": []
+    },
+    {
+      "question_id": "Q14",
+      "question": "What was the service called before, and how does it relate to its neighbors?",
+      "cold_answer": "Previously Azure Cosmos DB for MongoDB vCore; distinct from RU and NoSQL; built on open-source DocumentDB; unrelated to Amazon DocumentDB.",
+      "grounded_answer": "Correct. The FAQ confirms the former vCore name, dedicated-cluster distinction, unchanged existing APIs/URIs, and separation from Amazon DocumentDB. It also distinguishes this service from the original 2014–2017 Azure DocumentDB brand.",
+      "grounding_source": "FAQ; overview naming/history",
+      "grounding_links": [
+        {
+          "title": "Frequently asked questions about Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/faq#how-does-azure-documentdb-relate-to-azure-cosmos-db"
+        },
+        {
+          "title": "What is Azure DocumentDB? Naming and history",
+          "url": "https://learn.microsoft.com/azure/documentdb/overview#naming-and-history"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No brand-history confusion observed.",
+      "confusion_sources": [],
+      "build_risk": "None.",
+      "improvements": []
+    },
+    {
+      "question_id": "Q15",
+      "question": "What engine is underneath, and does that change application code?",
+      "cold_answer": "PostgreSQL with open-source DocumentDB extensions and a MongoDB gateway; keep MongoDB drivers/BSON/aggregation rather than SQL clients.",
+      "grounded_answer": "Correct: DocumentDB is PostgreSQL-based, while managed applications use the MongoDB-compatible protocol and drivers. Engine internals do not require switching the app to PostgreSQL clients.",
+      "grounding_source": "Open-source engine overview; Node.js quickstart; local gateway skill",
+      "grounding_links": [
+        {
+          "title": "DocumentDB: The Open-Source Engine Powering Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/oss"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "documentdb-local-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/local-deployment/SKILL.md"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No engine-versus-client-protocol confusion observed.",
+      "confusion_sources": [],
+      "build_risk": "None; compatibility must still be checked per operation.",
+      "improvements": []
+    },
+    {
+      "question_id": "S01",
+      "question": "What index definition should this sample use for product embeddings?",
+      "cold_answer": "Store numeric products.embedding arrays; create vector-diskann with dimensions:1536, COS, maxDegree:32, lBuild:64 using db.command(...).",
+      "grounded_answer": "The index payload and numeric-array representation are correct, and 64 is a valid lBuild choice rather than an obsolete default. For Node.js, invoke the payload through MongoClient’s Db.command; shell examples use db.runCommand. Use M30+ and match the embedding model’s actual dimensions.",
+      "grounding_source": "Vector-search page; Node.js quickstart",
+      "grounding_links": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No confusion observed; db.command is a valid Node.js Db method, although similarly named Python examples also appear.",
+      "confusion_sources": [],
+      "build_risk": "Do not confuse 20,000 transactions with the number of catalog vectors, or mix model dimensions.",
+      "improvements": []
+    },
+    {
+      "question_id": "S02",
+      "question": "What aggregation retrieves semantic candidates from DiskANN?",
+      "cold_answer": "$search with cosmosSearch vector/path/k:25/lSearch:40 and returnStoredSource:true, then project searchScore; exclude input/session items and rerank to five.",
+      "grounded_answer": "The documented query uses $search/cosmosSearch and searchScore; k=25 with lSearch=40 satisfies lSearch>=k. returnStoredSource is documented on vector queries. Oversampling and application reranking are reasonable sample choices, not service-defined recommendation behavior. Prefilter indexed exclusions where practical, and handle fewer than five eligible products explicitly.",
+      "grounding_source": "documentdb-vector-search vector-knn-query; vector-search page",
+      "grounding_links": [
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        },
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No Atlas $vectorSearch confusion observed.",
+      "confusion_sources": [],
+      "build_risk": "A fixed 25 candidates does not guarantee five results after extensive exclusions.",
+      "improvements": []
+    },
+    {
+      "question_id": "S03",
+      "question": "How should the app read and ingest co-purchase history?",
+      "cold_answer": "Use mongodb, orders with orderId/productIds/purchasedAt, insertMany batches of 1,000, an index on productIds, and match/unwind/exclude/group with $sum.",
+      "grounded_answer": "These driver operations, multikey indexing, and aggregation stages are supported. The schema and batch size are application choices. For the review’s repeatable synthetic seed assumption, use deterministic identifiers and an idempotent ingestion strategy; plain insertMany without stable duplicate handling is only safe for a first run.",
+      "grounding_source": "MQL compatibility matrix; indexing and local seed resources",
+      "grounding_links": [
+        {
+          "title": "MongoDB Query Language compatibility in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language"
+        },
+        {
+          "title": "documentdb-indexing",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/indexing/SKILL.md"
+        },
+        {
+          "title": "documentdb-local-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/local-deployment/SKILL.md"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No service confusion observed; repeatability is an additional sample-design requirement.",
+      "confusion_sources": [],
+      "build_risk": "Uncontrolled seed reruns inflate co-purchase counts, and duplicate product IDs within an order can overcount relationships.",
+      "improvements": []
+    },
+    {
+      "question_id": "S04",
+      "question": "How should the sample connect and reject a missing or invalid connection string?",
+      "cold_answer": "Read JSON connectionString; require a nonempty mongodb:// or mongodb+srv:// URI; create MongoClient with bounded server selection, connect and ping; report errors without secrets.",
+      "grounded_answer": "A private JSON config is consistent with the prompt’s config-file requirement; .env is the installed skill’s alternative. The Node.js quickstart confirms connect and ping, and the connection skill supports bounded server selection. Scheme validation alone is insufficient: use the actual managed mongodb+srv URI, TLS and compatible authentication, and let the driver detect DNS/auth/network failures without leaking credentials.",
+      "grounding_source": "Node.js quickstart; documentdb-connection; local configuration and MCP secret-handling guidance",
+      "grounding_links": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        },
+        {
+          "title": "documentdb-mcp-setup",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/mcp-setup/SKILL.md"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No API or SDK confusion observed; JSON versus .env is a design choice, not a service restriction.",
+      "confusion_sources": [],
+      "build_risk": "A URI-prefix check must not be presented as proof of a valid managed connection.",
+      "improvements": []
+    },
+    {
+      "question_id": "S05",
+      "question": "Does Azure DocumentDB automatically provide LlamaIndex session memory, and how should the sample persist it?",
+      "cold_answer": "No automatic attachment; explicitly key memory by sessionId, optionally persist sessions with a unique index and updateOne upsert, load before retrieval and save afterward.",
+      "grounded_answer": "The architecture is supported: documented agent examples explicitly manage conversation history by session identifiers, and DocumentDB supports unique indexes and updateOne/upsert. The LlamaIndex guide does not supply automatic session-memory wiring and its vector-store connector is Python-only. A sessions collection is an application design, not a built-in LlamaIndex persistence contract; exact JavaScript memory serialization and agent APIs remain unverified.",
+      "grounding_source": "AI travel-agent architecture; LlamaIndex guide; Node.js guide; compatibility matrix",
+      "grounding_links": [
+        {
+          "title": "AI travel agent: architecture",
+          "url": "https://learn.microsoft.com/azure/documentdb/tutorial-ai-agent#understand-the-ai-agent-architecture"
+        },
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        },
+        {
+          "title": "Build a Node.js console app with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-build-nodejs-console-app#configure-your-console-application"
+        },
+        {
+          "title": "MongoDB Query Language compatibility in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language"
+        }
+      ],
+      "outcome": "correct",
+      "confused_with": "none",
+      "why_the_confusion_arose": "No automatic-memory confusion observed. Verification covers the explicit storage architecture, not an undocumented LlamaIndex adapter.",
+      "confusion_sources": [],
+      "build_risk": "Saving an arbitrary object does not automatically make LlamaIndex consume it; per-session isolation and framework wiring need tests.",
+      "improvements": []
+    }
+  ],
+  "information_gaps": [
+    {
+      "title": "LlamaIndex JavaScript agent and memory APIs",
+      "description": "The builder still needs compatible package versions, tool registration, per-session history injection, and memory serialization APIs. Searches for DocumentDB/LlamaIndex TypeScript session memory found a Python-only vector-store guide and generic JavaScript driver fallback, not a complete Node.js agent-memory example. This is missing implementation guidance, not evidence that the requested architecture is unsupported."
+    },
+    {
+      "title": "Runtime and dependency compatibility",
+      "description": "Node v26.13.0 meets the database quickstart’s 22+ prerequisite, but no retrieved source pins a mutually compatible LlamaIndex, model-provider, and mongodb release set for that runtime. npm itself was not separately inventoried."
+    },
+    {
+      "title": "Actual target readiness",
+      "description": "The inventory identifies a default MCP profile but not its cluster resource ID, M30+ tier, application URI, network route, or ingestion/index privileges. Skills establish the prerequisites, not that the supplied environment satisfies them. The user must confirm the intended cluster without exposing credentials."
+    },
+    {
+      "title": "Retryable-write support matrix",
+      "description": "documentdb-connection, documentdb-azure-deployment, and the native Node.js quickstart use false; documentdb-driver and the Node.js OIDC guide use true; Amazon migration guidance says to remove false. No retrieved source reconciles support by authentication, operation, version, or topology. Use the native vector sample’s false setting, but do not claim the service-wide support question is settled."
+    },
+    {
+      "title": "Recommendation ranking and quality",
+      "description": "Vector and aggregation syntax are documented, but no source specifies how this retail sample should combine co-purchase counts, semantic similarity, and session preferences. Catalog size, duplicate-line semantics, normalization, deterministic tie-breaking, and fallback behavior when fewer than five items remain require explicit application assumptions."
+    },
+    {
+      "title": "Local DiskANN parity",
+      "description": "The local skill and development-loop tutorial document the gateway image and CRUD connection, but do not establish that the selected local image implements managed DiskANN with identical behavior. Local CRUD tests cannot replace an authorized M30+ integration check."
+    },
+    {
+      "title": "Model access and ingestion budget",
+      "description": "The LlamaIndex guide documents provider configuration, but the inventory does not verify credentials, deployments, quotas, or embedding costs. The builder must choose whether to embed a small catalog once rather than all 20,000 order records and implement bounded provider calls."
+    }
+  ],
+  "blockers": [],
+  "guidance_for_builder": [
+    {
+      "instruction": "If cluster inspection commands are needed, use az documentdb mongocluster with the documentdb extension, not the former cosmosdb-preview command guidance. Do not provision resources for this sample.",
+      "sources": [
+        {
+          "title": "Quickstart: Create an Azure DocumentDB cluster by using Azure CLI",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-cli#create-an-azure-documentdb-cluster"
+        }
+      ]
+    },
+    {
+      "instruction": "Use the user-populated portal connection string rather than constructing its host. The current native Node.js quickstart uses the global SRV endpoint with TLS, SCRAM-SHA-256, retrywrites=false, and maxIdleTimeMS=120000; retain certificate validation and do not copy retryWrites=true from the singleton example.",
+      "sources": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        }
+      ]
+    },
+    {
+      "instruction": "Check compatibility against versions 5.0–8.0 and use 8.0 as the current quickstart default if a version must be chosen. Do not document cross-shard ACID transactions as unsupported.",
+      "sources": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "Compare Azure DocumentDB to MongoDB Atlas",
+          "url": "https://learn.microsoft.com/azure/documentdb/compare-mongodb-atlas#compatibility-and-licensing"
+        }
+      ]
+    },
+    {
+      "instruction": "If optional local tests are added, use ghcr.io/documentdb/documentdb/documentdb-local:latest with the MongoDB gateway on 10260 and explicit local authentication/TLS settings; do not use the recalled Microsoft-prefixed image path or a Cosmos DB emulator.",
+      "sources": [
+        {
+          "title": "Tutorial: Build a TypeScript app with DocumentDB and deploy to Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/development-loop"
+        },
+        {
+          "title": "documentdb-local-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/local-deployment/SKILL.md"
+        }
+      ]
+    }
+  ],
+  "inventory_recommendations": [
+    {
+      "name": "azd",
+      "worth_adding": false,
+      "recommendation": "No deployment or template provisioning is requested; keep the sample existing-cluster-only.",
+      "references": []
+    },
+    {
+      "name": "bicep",
+      "worth_adding": false,
+      "recommendation": "No infrastructure deliverable is needed. Missing standalone Bicep should not trigger provisioning work.",
+      "references": [
+        {
+          "title": "Quickstart: Deploy an Azure DocumentDB cluster using Bicep",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep"
+        }
+      ]
+    },
+    {
+      "name": "terraform",
+      "worth_adding": false,
+      "recommendation": "No infrastructure deployment is requested; installing another IaC workflow adds no material value here.",
+      "references": []
+    },
+    {
+      "name": "mongosh",
+      "worth_adding": false,
+      "recommendation": "The available data-plane MCP and Node.js driver cover connectivity, counts, aggregation, and index inspection. Skills should show Db.command equivalents beside shell examples.",
+      "references": [
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "Azure DocumentDB MCP Toolkit",
+          "url": "https://learn.microsoft.com/azure/documentdb/mcp-toolkit#key-features"
+        }
+      ]
+    }
+  ]
+}

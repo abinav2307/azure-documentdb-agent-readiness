@@ -23,6 +23,8 @@ The Flask, ada-002, native IVF and top-10 search implementation is present, with
 
 ### On the checklist, no public source found
 
+This section lists checklist items where neither the agent’s open search nor a search by name found a public source. Of the six, only one is a real documentation gap. The other five are showing up here because of how I wrote the starter checklist, not because the docs are missing something.
+
 - The driver version is pinned and is one the service supports. (searched: Searched Azure DocumentDB supported/pinned PyMongo versions and loaded documentdb-driver. The compatibility page accepts wire-protocol drivers and the quickstart gives minimum versions, but no exact-version validation matrix or pinning recommendation was found.)
 - If sharded, explain the shard key choice. (searched: Searched Azure DocumentDB shard-key explanation and data-modeling/sharding guidance. Found selection recommendations, not a requirement that gallery samples document the rationale.)
 - README states demonstration, prerequisites, setup, run and cleanup. (searched: Searched Azure DocumentDB sample README guidelines and prerequisite/setup/run/cleanup requirements; loaded local/deployment skills. Found example sections, not a complete gallery README rule.)

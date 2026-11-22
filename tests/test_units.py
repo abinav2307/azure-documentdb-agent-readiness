@@ -121,9 +121,79 @@ def test_required_mcp_server_blocks_even_if_the_model_says_ready(tmp_path: Path)
     ctx = RunContext(Settings(), tmp_path, "s", "p", "", DecisionLog(tmp_path), lambda n: None)
     ctx.mcp_statuses = [McpServerStatus("documentdb", "", True, ["build"], False, "npx not found", [])]
     review = PromptReview(verdict="sufficient", summary="", rubric=[], contradictions=[], questions_for_author=[], requirements_at_risk=[])
-    ready = ReadinessReport(verdict="ready", summary="", tools=[], accelerators_missed=[], confusions=[],
-                            information_gaps=[], blockers=[], guidance_for_builder=[])
+    ready = ReadinessReport(verdict="ready", summary="", summary_points=[], tools=[], accelerators_missed=[], confusions=[],
+                            information_gaps=[], blockers=[], guidance_for_builder=[], inventory_recommendations=[])
     gated = enforce_gates(ctx, review, ready)
     assert gated.verdict == "blocked" and "documentdb" in gated.blockers[0]
     ctx.mcp_statuses = []
     assert enforce_gates(ctx, review, ready).verdict == "ready"
+
+
+def test_blank_settings_in_env_file_do_not_reach_the_openai_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from factory.llm import make_client
+
+    for name in ("OPENAI_BASE_URL", "OPENAI_API_KEY", "FACTORY_PROVIDER", "FACTORY_MODEL", "AZURE_OPENAI_ENDPOINT"):
+        monkeypatch.delenv(name, raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("FACTORY_PROVIDER=openai\nFACTORY_MODEL=some-model\nOPENAI_API_KEY=sk-test\nOPENAI_BASE_URL=\n"
+                        "AZURE_OPENAI_ENDPOINT=https://<your-resource>.openai.azure.com\n")
+    client = make_client(Settings.load(env_file))
+    assert str(client.client.base_url).startswith("https://api.openai.com/v1")
+    for name in ("OPENAI_BASE_URL", "OPENAI_API_KEY", "FACTORY_PROVIDER", "FACTORY_MODEL", "AZURE_OPENAI_ENDPOINT"):
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_quiz_questions_are_read_from_the_quiz_file() -> None:
+    from factory.agents.readiness import quiz_questions
+
+    questions = quiz_questions()
+    assert len(questions) == 15 and questions["Q01"].startswith("What is the Azure resource provider namespace")
+
+
+def test_old_cold_answer_files_still_load() -> None:
+    from factory.models import ColdQuiz
+
+    old = ColdQuiz.model_validate_json('{"answers": [{"question_id": "Q01", "answer": "x", "confidence": "high"}]}')
+    assert old.answers[0].question == ""
+
+
+def test_readiness_score_is_deterministic_and_explained() -> None:
+    from factory.models import Confusion, InformationGap, Link, ToolReadiness
+    from factory.scoring import score_readiness
+
+    def confusion(qid, outcome, link=True, conflict=False):
+        return Confusion(question_id=qid, question="q", cold_answer="c", grounded_answer="g",
+                         grounding_source="docs" if link else "none found",
+                         grounding_links=[Link(title="p", url="https://learn.microsoft.com/x")] if link else [],
+                         outcome=outcome, confused_with="none", why_the_confusion_arose="",
+                         confusion_sources=[Link(title="old", url="https://example.com")] if conflict else [],
+                         build_risk="", improvements=[])
+
+    report = ReadinessReport(
+        verdict="ready_with_gaps", summary="", summary_points=[], accelerators_missed=[], blockers=[],
+        guidance_for_builder=[], inventory_recommendations=[],
+        tools=[ToolReadiness(name="kit", kind="skill", needed_for="", available=True, detail="", impact_if_missing="", workaround="", references=[]),
+               ToolReadiness(name="mcp", kind="mcp_server", needed_for="", available=False, detail="", impact_if_missing="", workaround="", references=[]),
+               ToolReadiness(name="bicep", kind="cli", needed_for="", available=False, detail="", impact_if_missing="", workaround="", references=[])],
+        confusions=[confusion("Q1", "correct"), confusion("Q2", "outdated", conflict=True),
+                    confusion("Q3", "wrong"), confusion("Q4", "could_not_verify", link=False)],
+        information_gaps=[InformationGap(title="a", description="")],
+    )
+    first, second = score_readiness(report), score_readiness(report)
+    assert first.score == second.score
+    by_key = {c.key: c for c in first.components}
+    assert by_key["knowledge"].share == 0.375        # (1 + 0.5 + 0 + 0) / 4
+    assert by_key["grounding"].share == 0.75         # Q4 not grounded
+    assert by_key["consistency"].share == 0.75       # Q2 has a conflicting source
+    assert by_key["tooling"].share == 0.5            # the CLI is ignored: it is the machine, not the product
+    assert first.gap_penalty == 2
+    assert first.score == round(7.5 + 26.2 + 18.8 + 10.0 - 2)   # points are rounded to 0.1 each
+    assert first.score == 60 and first.band == "Medium"   # 60 is the bottom of Medium
+
+
+def test_readiness_reports_from_before_the_new_fields_still_load() -> None:
+    old = {"verdict": "ready", "summary": "s", "tools": [], "accelerators_missed": [], "confusions": [],
+           "information_gaps": ["gap"], "blockers": [], "guidance_for_builder": ["do x"]}
+    report = ReadinessReport.model_validate(old)
+    assert report.information_gaps[0].description == "gap" and report.guidance_for_builder[0].instruction == "do x"
+    assert report.summary_points == ["s"] and report.inventory_recommendations == []

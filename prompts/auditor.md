@@ -54,6 +54,13 @@ A match means the same recommendation, not the same topic. "Use connection pooli
 
 Never construct or recall a URL. Copy it from the discovered practice or from a tool result, or leave it empty.
 
+For every check, also fill in:
+
+- `topic` - a short title of 2 to 6 words, such as "Connection client reuse" or "IVF parameter sizing".
+- `sources` - every public page or skill that states the practice, each with its title and the URL copied exactly. For a skill, give its name as the title and leave the URL empty; the pipeline fills in its public address.
+- `searched` - for `listed_found_by_name_only` and `listed_not_found`: the searches you ran and what each found, in a sentence or two. For other checks, it can stay empty.
+- `what_would_help` - for `prior_knowledge_only` and `listed_not_found`: the public information that would have let an agent confirm or correct the practice without relying on memory. Be specific about the content and where it belongs, for example "a sentence on the vector search page stating when to create an IVF index relative to loading data". Otherwise empty.
+
 **Step 2: check the app against each practice.** This decides `status`.
 
 - `followed` - cite the file and line that shows it.

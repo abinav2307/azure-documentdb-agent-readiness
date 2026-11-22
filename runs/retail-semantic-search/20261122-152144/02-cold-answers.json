@@ -1,0 +1,124 @@
+{
+  "answers": [
+    {
+      "question_id": "Q01",
+      "question": "What is the Azure resource provider namespace and resource type of an Azure DocumentDB cluster?",
+      "answer": "The provider namespace is Microsoft.DocumentDB, and the cluster resource type is Microsoft.DocumentDB/mongoClusters.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q02",
+      "question": "Which Azure CLI command group creates and manages a cluster? Is it in the core CLI or an extension?",
+      "answer": "I would use the az cosmosdb mongocluster command group, supplied by the cosmosdb-preview extension rather than the core CLI. Start with az extension add --name cosmosdb-preview, then az cosmosdb mongocluster create --resource-group <rg> --cluster-name <name> with administrator, server-version, and shard-node configuration arguments.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q03",
+      "question": "Which Bicep and Terraform resource types deploy a cluster?",
+      "answer": "In Bicep, use Microsoft.DocumentDB/mongoClusters, for example resource cluster 'Microsoft.DocumentDB/mongoClusters@2024-07-01'. In Terraform, use azurerm_mongo_cluster; an AzAPI alternative is azapi_resource with type Microsoft.DocumentDB/mongoClusters@2024-07-01.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q04",
+      "question": "What does a connection string look like: scheme, host suffix, port, and the options it must carry?",
+      "answer": "For password authentication I would use mongodb+srv://<username>:<url-encoded-password>@<cluster>.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false&maxIdleTimeMS=120000. The SRV URI does not include an explicit port; I would allow outbound TCP 10260 for the database endpoints. TLS is required, and I would disable retryable writes.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q05",
+      "question": "How is capacity provisioned and billed: request units, compute tiers with vCores, serverless, or something else?",
+      "answer": "Capacity is provisioned as compute tiers with vCores and memory, plus storage, shard count, and optional high availability. It is not an RU/s database. I would budget for provisioned compute, storage, and any HA replicas rather than request-unit consumption.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q06",
+      "question": "Which authentication methods are supported, and how does a driver authenticate with Microsoft Entra ID?",
+      "answer": "Use either native username/password authentication with SCRAM-SHA-256 or Microsoft Entra ID authentication. For Entra ID, configure the cluster's Entra access and database principal, then use a MongoDB driver supporting MONGODB-OIDC with authSource=$external. In Node.js I would supply an OIDC_CALLBACK that obtains an Azure Identity token for https://ossrdbms-aad.database.windows.net/.default and returns an object containing accessToken and expiresInSeconds. I would not send the token using SCRAM.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q07",
+      "question": "Which client library should an application use? Is there a service-specific SDK?",
+      "answer": "Use a standard MongoDB driver. For this Node.js app, install mongodb and construct a MongoClient from the connection string. There is no separate DocumentDB data-plane SDK required, and the Azure Cosmos DB NoSQL SDK is not the right client.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q08",
+      "question": "Which vector index types are supported, and what does the command that creates one look like?",
+      "answer": "The vector index types are IVF, HNSW, and DiskANN, expressed as vector-ivf, vector-hnsw, and vector-diskann. For DiskANN I would run db.runCommand({createIndexes:'products',indexes:[{name:'product_embedding_diskann',key:{embedding:'cosmosSearch'},cosmosSearchOptions:{kind:'vector-diskann',dimensions:1536,similarity:'COS',maxDegree:32,lBuild:64}}]}). The dimensions must match the embedding model's output.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q09",
+      "question": "How are full-text search and hybrid search done?",
+      "answer": "For full-text search I would create a MongoDB text index, such as db.products.createIndex({name:'text',description:'text'}), and query with {$text:{$search:query}}, projecting and sorting by {$meta:'textScore'}. For vector search I would use the service's $search stage with cosmosSearch. For hybrid search I would run the text and vector retrievals separately and combine their ranked results using reciprocal rank fusion in application code; I would not assume Atlas Search indexes or Atlas $vectorSearch syntax.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q10",
+      "question": "Which MongoDB wire protocol or server versions are supported, and which commonly used MongoDB features are not?",
+      "answer": "I would target MongoDB 7.0 compatibility with a current MongoDB driver; my working belief is that cluster server-version choices include 5.0, 6.0, 7.0, and 8.0. This is MongoDB wire compatibility, not a deployment of the MongoDB server. I would avoid mapReduce, server-side JavaScript such as $where, cross-shard transactions, and unrestricted server-administration commands. I would also replace Atlas-specific $vectorSearch and Search index management with DocumentDB's cosmosSearch syntax.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q11",
+      "question": "How do you run the database locally for development and tests: which image or emulator, and which port?",
+      "answer": "I would use the open-source DocumentDB local container, starting with docker run --rm -p 10260:10260 ghcr.io/microsoft/documentdb/documentdb-local:latest, and connect a MongoDB driver to localhost:10260. I would not use the Azure Cosmos DB NoSQL emulator as a substitute for this service.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q12",
+      "question": "Are change streams supported, and does anything have to be enabled first?",
+      "answer": "Yes, my working belief is that change streams are supported through an opt-in cluster feature named EnableChangeStreams. I would enable that capability before using collection.watch() and would persist resume tokens for restart recovery.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q13",
+      "question": "Which MCP server gives an agent data-plane tools for this service? Does the general Azure MCP Server cover it?",
+      "answer": "I would use the dedicated DocumentDB MCP server from microsoft/documentdb-mcp and configure it with the cluster's MongoDB connection string. I would not rely on the general Azure MCP Server for DocumentDB collection queries or vector-search data-plane operations.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q14",
+      "question": "What was this service called before, and how does it relate to Azure Cosmos DB and to the open-source DocumentDB project?",
+      "answer": "It was previously Azure Cosmos DB for MongoDB vCore. Azure DocumentDB is the renamed managed MongoDB-compatible service, distinct from Azure Cosmos DB for MongoDB's RU-based offering and from Cosmos DB for NoSQL. It is based on Microsoft's open-source DocumentDB project, which supplies the underlying document engine. It is unrelated to Amazon DocumentDB.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q15",
+      "question": "What engine is underneath, and does that change anything in application code?",
+      "answer": "The underlying engine is PostgreSQL with the open-source DocumentDB extensions, including a MongoDB-compatible gateway. Application code still uses MongoDB drivers, BSON documents, collection operations, and aggregation pipelines rather than PostgreSQL clients or SQL. The engine matters when checking feature compatibility, but it does not require switching the application's data-access protocol.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S01",
+      "question": "What index definition should this sample use for product embeddings?",
+      "answer": "Store each product's embedding as a numeric array in products.embedding and create a DiskANN index with db.command({createIndexes:'products',indexes:[{name:'product_embedding_diskann',key:{embedding:'cosmosSearch'},cosmosSearchOptions:{kind:'vector-diskann',dimensions:1536,similarity:'COS',maxDegree:32,lBuild:64}}]}). Use an embedding model configured to return exactly 1536 dimensions.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S02",
+      "question": "What aggregation should retrieve semantic recommendation candidates from the DiskANN index?",
+      "answer": "Use products.aggregate([{$search:{cosmosSearch:{vector:queryEmbedding,path:'embedding',k:25,lSearch:40},returnStoredSource:true}},{$project:{productId:1,name:1,description:1,score:{$meta:'searchScore'}}}]). Retrieve more than five candidates, remove the input product and session-excluded products in application code, rerank using co-purchase and session signals, and return the top five.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "S03",
+      "question": "How should the app read and ingest co-purchase history using Azure DocumentDB?",
+      "answer": "Use the standard Node.js mongodb driver and store transactions as documents such as {orderId,productIds,purchasedAt}. Ingest 20,000 transactions with insertMany in batches of 1,000 and create an index with orders.createIndex({productIds:1}). Compute co-purchases using an aggregation that matches orders containing the input product, unwinds productIds, excludes the input product, and groups by product ID with count:{$sum:1}.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S04",
+      "question": "How should the sample connect to Azure DocumentDB and reject a missing or invalid connection string?",
+      "answer": "Read connectionString from a JSON configuration file and require a nonempty mongodb:// or mongodb+srv:// URI. Construct MongoClient with a bounded serverSelectionTimeoutMS, call connect(), and run db.command({ping:1}) before starting the agent. Report a clear configuration or connection error without printing the URI or credentials. Use the service-compatible TLS and authentication options, and do not substitute an Azure Cosmos DB NoSQL endpoint or SDK.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S05",
+      "question": "Does Azure DocumentDB automatically provide LlamaIndex session memory, and how should this sample persist it?",
+      "answer": "Azure DocumentDB does not automatically attach conversational memory to a LlamaIndex agent. Keep memory explicitly keyed by sessionId and, if persistence is needed, store it in a sessions collection with a unique index on sessionId. Load that session's preferences and recent interactions before recommendation retrieval, update it afterward with updateOne({sessionId},{$set:{memory,updatedAt:new Date()}},{upsert:true}), and never mix memory across sessions.",
+      "confidence": "high"
+    }
+  ]
+}

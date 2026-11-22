@@ -30,6 +30,7 @@ from .context import RunContext
 from .decision_log import DecisionLog
 from .llm import make_client
 from .tools import environment
+from .scoring import score_readiness
 from .models import AuditReport, BuildReport, ColdQuiz, DiscoveredPractices, PriorBeliefs, PromptReview, ReadinessReport
 
 T = TypeVar("T", bound=BaseModel)
@@ -168,9 +169,12 @@ async def run_pipeline(
         _save(run_dir, "02-inventory", inventory)
         _save(run_dir, "02-readiness", readiness, reports.readiness_md(sample_name, readiness, inventory, cold))
     verdicts["readiness"] = readiness.verdict
-    wrong = [c for c in readiness.confusions if c.outcome in ("wrong", "partly_wrong")]
+    wrong = [c for c in readiness.confusions if c.outcome in ("wrong", "partly_wrong", "outdated")]
     say(f"      Readiness: {readiness.verdict}. {readiness.summary}")
-    say(f"      Service confusions: {len(wrong)} of {len(readiness.confusions)} answers from memory were wrong or partly wrong.")
+    say(f"      Service confusions: {len(wrong)} of {len(readiness.confusions)} answers from memory were wrong, partly wrong or outdated.")
+    readiness_score = score_readiness(readiness)
+    verdicts["readiness_score"] = f"{readiness_score.score} (v{readiness_score.version})"
+    say(f"      Agent readiness confidence: {readiness_score.score}/100 ({readiness_score.band}). See 02-readiness.md for the breakdown.")
     for blocker in readiness.blockers:
         say(f"      ! {blocker}")
     if readiness.verdict == "blocked" and not force:
@@ -246,7 +250,7 @@ async def run_pipeline(
             f"{basis['prior_knowledge_contradicted']} contradicted, {basis['prior_knowledge_only']} with no public source.")
         say("      Reconciling with the checklist and auditing the app ...")
         audit = await audit_app(ctx, review, readiness, build, discovered)
-        _save(run_dir, "05-audit", audit, reports.audit_md(sample_name, audit, sources))
+        _save(run_dir, "05-audit", audit, reports.audit_md(sample_name, audit, sources, ctx.log.read()))
         (run_dir / "doc-gaps.md").write_text(reports.doc_gaps_md(sample_name, audit.doc_gaps), encoding="utf-8")
     verdicts["audit"] = audit.verdict
     if audit.requirement_results:

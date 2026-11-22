@@ -154,4 +154,10 @@ def _describe(exc: BaseException) -> str:
     if inner:
         return "; ".join(_describe(e) for e in inner)[:400]
     message = exc.args[0] if exc.args and isinstance(exc.args[0], str) else str(exc)
-    return " ".join(message.split())[:400]
+    message = " ".join(message.split())[:400]
+    if "WouldBlock" in message or "BrokenResourceError" in message or "ClosedResourceError" in message:
+        message += (
+            " - the server process started and then exited before answering. Its own error went to its error stream; "
+            "run the command from mcp.json by hand, with the same environment variables, to see it."
+        )
+    return message

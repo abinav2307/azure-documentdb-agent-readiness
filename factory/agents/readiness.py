@@ -10,11 +10,12 @@ Three steps:
 from __future__ import annotations
 
 import json
+import re
 
 from ..config import load_prompt
 from ..context import RunContext
 from ..llm import run_agent, skills_provider
-from ..models import ColdQuiz, PromptReview, ReadinessReport
+from ..models import ColdQuiz, Link, PromptReview, ReadinessReport
 from ..tools import environment, mcp_inventory
 
 
@@ -38,19 +39,36 @@ async def collect_inventory(ctx: RunContext) -> dict:
     }
 
 
+def quiz_questions() -> dict[str, str]:
+    """Question id -> question text, read from confusion_quiz.md."""
+    found = re.findall(r"^\s*-\s*\*\*(Q\d+)\*\*\s*(.+?)\s*$", load_prompt("confusion_quiz.md"), re.MULTILINE)
+    return {qid: text for qid, text in found}
+
+
+def with_question_text(cold: ColdQuiz) -> ColdQuiz:
+    """Put the exact quiz wording next to each Q answer, whatever the model wrote there."""
+    questions = quiz_questions()
+    answers = [
+        a.model_copy(update={"question": questions[a.question_id]}) if a.question_id in questions else a
+        for a in cold.answers
+    ]
+    return cold.model_copy(update={"answers": answers})
+
+
 async def cold_quiz(ctx: RunContext) -> ColdQuiz:
     task = (
         f"<quiz>\n{load_prompt('confusion_quiz.md')}\n</quiz>\n\n"
         f"{ctx.sample_block()}\n\n"
         "Answer every quiz question, then add your S01-S05 answers for this sample."
     )
-    return await run_agent(
+    cold = await run_agent(
         ctx.client_factory(None),
         name="readiness_cold",
         instructions=load_prompt("readiness_cold.md"),
         task=task,
         output_type=ColdQuiz,
     )
+    return with_question_text(cold)
 
 
 async def check_readiness(ctx: RunContext, review: PromptReview, inventory: dict, cold: ColdQuiz) -> ReadinessReport:
@@ -73,7 +91,34 @@ async def check_readiness(ctx: RunContext, review: PromptReview, inventory: dict
         context_providers=[skills_provider(ctx.skill_roots)],
         middleware=[ctx.log.trace_middleware("readiness")],
     )
-    return enforce_gates(ctx, review, report)
+    return enforce_gates(ctx, review, clean_links(ctx, report))
+
+
+def clean_links(ctx: RunContext, report: ReadinessReport) -> ReadinessReport:
+    """Addresses are set by code: real web addresses are kept, skills get their public GitHub address."""
+    skill_urls = environment.skill_public_urls(ctx.settings.skill_paths)
+
+    def fix(links: list[Link]) -> list[Link]:
+        fixed = []
+        for link in links:
+            title, url = link.title.strip(), link.url.strip()
+            if not url.startswith(("https://", "http://")):
+                url = skill_urls.get(title, "")
+            if title or url:
+                fixed.append(Link(title=title or url, url=url))
+        return fixed
+
+    return report.model_copy(update={
+        "confusions": [
+            c.model_copy(update={"grounding_links": fix(c.grounding_links), "confusion_sources": fix(c.confusion_sources)})
+            for c in report.confusions
+        ],
+        "tools": [t.model_copy(update={"references": fix(t.references)}) for t in report.tools],
+        "guidance_for_builder": [g.model_copy(update={"sources": fix(g.sources)}) for g in report.guidance_for_builder],
+        "inventory_recommendations": [
+            x.model_copy(update={"references": fix(x.references)}) for x in report.inventory_recommendations
+        ],
+    })
 
 
 def enforce_gates(ctx: RunContext, review: PromptReview, report: ReadinessReport) -> ReadinessReport:

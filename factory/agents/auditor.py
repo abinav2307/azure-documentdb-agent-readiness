@@ -22,7 +22,7 @@ import json
 from ..config import load_prompt
 from ..context import RunContext
 from ..llm import run_agent, skills_provider
-from ..models import AuditReport, BuildReport, DiscoveredPractices, PriorBeliefs, PromptReview, ReadinessReport
+from ..models import AuditReport, BuildReport, DiscoveredPractices, Link, PriorBeliefs, PromptReview, ReadinessReport
 from ..tools import environment, mcp_inventory
 from ..tools.workspace import Workspace
 
@@ -135,7 +135,7 @@ async def audit_app(
         f"<builder_report>\n{build.model_dump_json(indent=1)}\n</builder_report>\n\n"
         f"<prompt_review_verdict>{review.verdict}: {review.summary}</prompt_review_verdict>\n\n"
         f"<readiness_findings>\n"
-        f"information_gaps: {json.dumps(readiness.information_gaps)}\n"
+        f"information_gaps: {json.dumps([g.model_dump() for g in readiness.information_gaps])}\n"
         f"accelerators_missed: {json.dumps(readiness.accelerators_missed)}\n"
         f"service_confusions: {json.dumps(mistaken, indent=1)}\n"
         f"</readiness_findings>\n\n"
@@ -154,11 +154,21 @@ async def audit_app(
         middleware=[ctx.log.trace_middleware("audit")],
     )
     # A check that points at a discovered practice takes that practice's address;
-    # anything that is not a real web address is blanked.
+    # anything that is not a real web address is blanked, and skills get their public address.
+    skill_urls = environment.skill_public_urls(ctx.settings.skill_paths)
     by_id = {p.id: p for p in discovered.practices}
     checks = []
     for c in audit.checks:
         match = by_id.get(c.discovery_id.strip())
         url = match.source_url if match else _public(c.source_url)
-        checks.append(c.model_copy(update={"source_url": url}))
+        links: list[Link] = []
+        if match and match.source_kind != "prior_knowledge" and (match.source_name or match.source_url):
+            links.append(Link(title=match.source_name or match.source_url, url=match.source_url))
+        for link in c.sources:
+            link_url = _public(link.url) or skill_urls.get(link.title.strip(), "")
+            if (link.title or link_url) and all(link_url != l.url or not link_url for l in links):
+                links.append(Link(title=link.title.strip() or link_url, url=link_url))
+        if c.availability in ("prior_knowledge_only", "listed_not_found"):
+            links = []  # by definition, nothing public states these
+        checks.append(c.model_copy(update={"source_url": url, "sources": links}))
     return audit.model_copy(update={"checks": checks})

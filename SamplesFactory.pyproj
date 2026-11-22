@@ -43,6 +43,7 @@
     <Compile Include="factory\models.py" />
     <Compile Include="factory\pipeline.py" />
     <Compile Include="factory\reports.py" />
+    <Compile Include="factory\scoring.py" />
     <Compile Include="factory\tools\__init__.py" />
     <Compile Include="factory\tools\environment.py" />
     <Compile Include="factory\tools\mcp_inventory.py" />
@@ -60,6 +61,7 @@
     <Folder Include="factory\" />
     <Folder Include="factory\agents\" />
     <Folder Include="factory\tools\" />
+    <Folder Include="infra\" />
     <Folder Include="prompts\" />
     <Folder Include="requirements\" />
     <Folder Include="samples\" />
@@ -69,6 +71,7 @@
     <Content Include=".env.example" />
     <Content Include=".gitignore" />
     <Content Include="best-practices\checklist.md" />
+    <Content Include="infra\azure-openai.json" />
     <Content Include="mcp.json" />
     <Content Include="prompts\auditor.md" />
     <Content Include="prompts\builder.md" />

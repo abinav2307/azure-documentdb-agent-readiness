@@ -15,7 +15,7 @@ from factory import pipeline
 from factory.aggregate import aggregate
 from factory.config import Settings
 from factory.models import (
-    AuditReport, BuildReport, ColdQuiz, Confusion, DiscoveredPractice, DiscoveredPractices, DocGap, PracticeCheck, DecisionReview, RequirementResult,
+    AuditReport, BuilderCorrection, BuildReport, ColdQuiz, Confusion, InformationGap, InventoryRecommendation, Link, DiscoveredPractice, DiscoveredPractices, DocGap, PracticeCheck, DecisionReview, RequirementResult,
     PriorBelief, PriorBeliefs, PromptReview, QuizAnswer, ReadinessReport, RubricItem, ToolReadiness,
 )
 from tests.fakes import ScriptedChatClient
@@ -43,7 +43,7 @@ def make_settings(tmp_path: Path, *, stub_required: bool = False, broken_require
         "source": "Azure/documentdb-agent-kit", "sourceType": "github", "skillPath": "skills/connection/SKILL.md"}}}))
     return Settings(
         model="scripted", skill_paths=[tmp_path / ".agents" / "skills"], mcp_config=tmp_path / "mcp.json", checklist=checklist,
-        runs_dir=tmp_path / "runs", allowed_commands=["python", "python3", "az", Path(sys.executable).name],
+        max_prior_beliefs=4, runs_dir=tmp_path / "runs", allowed_commands=["python", "python3", "az", Path(sys.executable).name],
         command_timeout_seconds=60,
     )
 
@@ -65,16 +65,47 @@ def review(verdict: str = "sufficient_with_assumptions") -> PromptReview:
 def readiness_report() -> ReadinessReport:
     return ReadinessReport(
         verdict="ready_with_gaps", summary="Can build; no data-plane MCP server.",
-        tools=[ToolReadiness(name="broken", kind="mcp_server", needed_for="index checks", available=False,
-                             detail="did not start", impact_if_missing="indexes unverified", workaround="unit tests")],
+        summary_points=["Can build.", "No data-plane MCP server."],
+        tools=[
+            ToolReadiness(name="broken", kind="mcp_server", needed_for="index checks", available=False,
+                          detail="did not start", impact_if_missing="indexes unverified", workaround="unit tests",
+                          references=[Link(title="MCP Toolkit", url="https://learn.microsoft.com/azure/documentdb/mcp-toolkit")]),
+            ToolReadiness(name="documentdb-connection", kind="skill", needed_for="connection", available=True,
+                          detail="loaded", impact_if_missing="", workaround="", references=[]),
+            ToolReadiness(name="bicep", kind="cli", needed_for="compile templates", available=False,
+                          detail="not on PATH", impact_if_missing="templates unchecked", workaround="az bicep build", references=[]),
+        ],
         accelerators_missed=["DocumentDB Agent Kit"],
-        confusions=[Confusion(
-            question_id="Q04", question="Connection string?", cold_answer="mongodb://host:27017",
-            grounded_answer="none found", grounding_source="stub_search_docs", outcome="could_not_verify",
-            confused_with="amazon_documentdb", why_the_confusion_arose="Same product name on another cloud.",
-            build_risk="Connection fails.")],
-        information_gaps=["Recommended IVF parameters"], blockers=[],
-        guidance_for_builder=["Take the connection string from the environment; do not construct it."],
+        confusions=[
+            Confusion(
+                question_id="Q04", question="Connection string?", cold_answer="mongodb://host:27017",
+                grounded_answer="none found", grounding_source="stub_search_docs", grounding_links=[],
+                outcome="could_not_verify", confused_with="amazon_documentdb",
+                why_the_confusion_arose="Same product name on another cloud.", confusion_sources=[],
+                build_risk="Connection fails.", improvements=["State the port on the connect page."]),
+            Confusion(
+                question_id="Q03", question="Which Bicep resource type?", cold_answer="mongoClusters@2024-07-01",
+                grounded_answer="Use 2026-06-01.", grounding_source="quickstart",
+                grounding_links=[Link(title="Bicep quickstart", url="https://learn.microsoft.com/azure/documentdb/quickstart-bicep"),
+                                 Link(title="documentdb-connection", url="")],
+                outcome="outdated", confused_with="none", why_the_confusion_arose="Older samples pin 2024-07-01.",
+                confusion_sources=[Link(title="PSRule example", url="https://azure.github.io/PSRule.Rules.Azure/x"),
+                                   Link(title="made up", url="not-a-url")],
+                build_risk="Older schema.", improvements=["Name the current version in the deployment skill."]),
+            Confusion(
+                question_id="Q01", question="Resource type?", cold_answer="Microsoft.DocumentDB/mongoClusters",
+                grounded_answer="Same.", grounding_source="docs", grounding_links=[], outcome="correct", confused_with="none",
+                why_the_confusion_arose="", confusion_sources=[], build_risk="", improvements=[]),
+        ],
+        information_gaps=[InformationGap(title="IVF sizing", description="Recommended IVF parameters")], blockers=[],
+        guidance_for_builder=[BuilderCorrection(
+            instruction="Take the connection string from the environment; do not construct it.",
+            sources=[Link(title="Connect page", url="https://learn.microsoft.com/azure/documentdb/connect")])],
+        inventory_recommendations=[
+            InventoryRecommendation(name="bicep", worth_adding=True, recommendation="Install with winget.", references=[]),
+            InventoryRecommendation(name="mongosh", worth_adding=False, recommendation="The app is tested with pytest.", references=[]),
+            InventoryRecommendation(name="broken", worth_adding=True, recommendation="Fix mcp.json.", references=[]),
+        ],
     )
 
 
@@ -98,7 +129,10 @@ class Script:
         if response_format is PromptReview:
             return review(self.review_verdict)
         if response_format is ColdQuiz:
-            return ColdQuiz(answers=[QuizAnswer(question_id="Q04", answer="mongodb://host:27017", confidence="medium")])
+            return ColdQuiz(answers=[
+                QuizAnswer(question_id="Q04", question="model's paraphrase", answer="mongodb://host:27017", confidence="medium"),
+                QuizAnswer(question_id="S01", question="What index does this sample need?", answer="vector-ivf", confidence="low"),
+            ])
         if response_format is ReadinessReport:
             if turn == 1:
                 return [("stub_search_docs", {"query": "Azure DocumentDB connection string"})]
@@ -138,6 +172,7 @@ class Script:
                 belief("K02", "Connect on port 27017", "amazon_documentdb"),
                 belief("K03", "Use retryable writes", "mongodb"),
                 belief("K04", "Never classified by discovery", "general"),
+                belief("K05", "Beyond the cap", "general"),
             ])
         if response_format is DiscoveredPractices:
             if turn == 1:
@@ -176,15 +211,21 @@ class Script:
                     PracticeCheck(practice="No secrets in source", category="security", status="followed",
                                   availability="discovered_and_listed", discovery_id="P02", source_url="",
                                   evidence="app/app.py:2", source="Security overview", searched="", fix=""),
-                    PracticeCheck(practice="Vector index parameters follow guidance", category="indexing", status="not_assessable",
-                                  availability="listed_not_found", discovery_id="", source_url="not a url",
-                                  evidence="", source="checklist only", searched="stub_search_docs: no result", fix=""),
-                    PracticeCheck(practice="Reuse one client", category="connection", status="followed",
+                    PracticeCheck(topic="IVF parameter sizing", practice="Vector index parameters follow guidance", category="indexing",
+                                  status="not_assessable", availability="listed_not_found", discovery_id="", source_url="not a url",
+                                  evidence="", source="checklist only", searched="stub_search_docs: no result", fix="",
+                                  sources=[Link(title="should be dropped", url="https://example.com")],
+                                  what_would_help="A numLists sizing rule on the vector search page."),
+                    PracticeCheck(topic="Client reuse", practice="Reuse one client", category="connection", status="followed",
                                   availability="discovered_and_listed", discovery_id="P01", source_url="",
-                                  evidence="app/app.py:1", source="documentdb-connection", searched="", fix=""),
-                    PracticeCheck(practice="Use retryable writes", category="reliability", status="not_assessable",
+                                  evidence="app/app.py:1", source="documentdb-connection", searched="", fix="",
+                                  sources=[Link(title="Connect page", url="https://learn.microsoft.com/azure/documentdb/connect"),
+                                           Link(title="invented", url="nope")],
+                                  what_would_help=""),
+                    PracticeCheck(topic="Retryable writes", practice="Use retryable writes", category="reliability", status="not_assessable",
                                   availability="prior_knowledge_only", discovery_id="P06", source_url="https://www.mongodb.com/docs/manual/",
-                                  evidence="app does not set it", source="", searched="retryable writes Azure DocumentDB", fix=""),
+                                  evidence="app does not set it", source="", searched="retryable writes Azure DocumentDB", fix="",
+                                  sources=[], what_would_help="One sentence on the connect page saying whether retryable writes are supported."),
                     PracticeCheck(practice="Batch bulk loads", category="reliability", status="not_applicable",
                                   availability="discovered_not_listed", discovery_id="P04", source_url="",
                                   evidence="", source="Bulk guidance", searched="", fix=""),
@@ -218,6 +259,9 @@ def test_full_pipeline(tmp_path: Path) -> None:
     run_dir = latest_run(settings)
 
     assert (run_dir / "05a-practice-discovery.md").exists()
+    cold = {a["question_id"]: a for a in json.loads((run_dir / "02-cold-answers.json").read_text())["answers"]}
+    assert cold["Q04"]["question"].startswith("What does a connection string look like")   # exact quiz wording
+    assert cold["S01"]["question"] == "What index does this sample need?"                   # the model's own
     for name in ["prompt.md", "01-prompt-review.md", "02-readiness.md", "02-cold-answers.json", "02-inventory.json",
                  "03-build.md", "04-decisions.md", "decisions.jsonl", "events.jsonl", "05-audit.md", "doc-gaps.md", "run.json"]:
         assert (run_dir / name).exists(), name
@@ -259,6 +303,8 @@ def test_full_pipeline(tmp_path: Path) -> None:
     discovery = json.loads((run_dir / "05a-practice-discovery.json").read_text())
     assert {p["id"]: p["source_kind"] for p in discovery["practices"]}["P06"] == "prior_knowledge"
     assert "did not classify: K04" in discovery["notes"]
+    assert "Not checked: K05" in discovery["notes"]                  # over the cap: set aside, and said so
+    assert '"id": "K05"' not in script.prompts["DiscoveredPractices"]
     discovery_md = (run_dir / "05a-practice-discovery.md").read_text()
     assert "| The model believed otherwise; public sources contradict it | 1 |" in discovery_md
     assert "**The model believed:** Connect on port 27017 (knowledge of `amazon_documentdb`)" in discovery_md
@@ -272,18 +318,51 @@ def test_full_pipeline(tmp_path: Path) -> None:
     assert "| Found publicly, not on the checklist | 1 |" in audit_md
     assert "| Known to the model, no public source, not on the checklist | 1 |" in audit_md
     assert "house-rules" in audit_md and "No documentation search server answered" not in audit_md
+    # Leads with the decision review, with each decision's text; everything else is in the appendix.
+    assert audit_md.index("## Review of the builder's decisions") < audit_md.index("## Appendix") < audit_md.index("### Public availability")
+    assert "| D003 | I chose pymongo 4.x | model_default | unverifiable |" in audit_md
+    # Tabulated availability sections with the requested columns.
+    assert "#### On the checklist, no public source found\n\n| Topic | Searched | Description |" in audit_md
+    assert "| IVF parameter sizing | stub_search_docs: no result | Vector index parameters follow guidance<br>**What would help:** A numLists sizing rule" in audit_md
+    assert "#### Known to the model, no public source, not on the checklist\n\n| Topic | Description | What would help |" in audit_md
+    assert "| Retryable writes | Use retryable writes | One sentence on the connect page" in audit_md
+    assert "#### On the checklist and found by open discovery\n\n| Topic | Description | Sources |" in audit_md
+    # Sources: the discovered practice first (skill mapped to its public page), then the model's real links; invented ones dropped.
+    assert ("| Client reuse | Reuse one client | [documentdb-connection](https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md)"
+            "<br>[Connect page](https://learn.microsoft.com/azure/documentdb/connect)<br>invented |") in audit_md
+    assert "should be dropped" not in audit_md
+    assert "| reliability | Batch bulk loads | Bulk guidance |" in audit_md   # old-style check: topic falls back to its category
 
     # operator approval + pipeline note about the broken server + the builder's two
     assert sources == ["operator", "tool_unavailable", "model_default", "tool_unavailable"]
     assert "broken" in decisions[1]["decision"]
 
     assert "Vector index parameters" in (run_dir / "doc-gaps.md").read_text()
-    assert json.loads((run_dir / "run.json").read_text())["verdicts"] == {
+    verdicts = json.loads((run_dir / "run.json").read_text())["verdicts"]
+    assert {k: v for k, v in verdicts.items() if k != "readiness_score"} == {
         "prompt_review": "sufficient_with_assumptions", "readiness": "ready_with_gaps",
         "build": "completed", "audit": "pass_with_findings"}
 
+    readiness_md = (run_dir / "02-readiness.md").read_text()
+    # Bullet verdict, score near the top, tools section last.
+    assert "- Can build.\n- No data-plane MCP server." in readiness_md
+    assert readiness_md.index("Agent readiness confidence") < readiness_md.index("## Service confusions")
+    assert readiness_md.rstrip().splitlines()[-1].startswith("| bicep |")
+    # Links: real addresses kept, invented ones dropped, skills mapped to their public address.
+    assert "[Bicep quickstart](https://learn.microsoft.com/azure/documentdb/quickstart-bicep)" in readiness_md
+    assert "Seen in: [PSRule example](https://azure.github.io/PSRule.Rules.Azure/x)<br>made up" in readiness_md
+    assert "[documentdb-connection](https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md)" in readiness_md
+    assert "**Improve:** Name the current version in the deployment skill." in readiness_md
+    assert "| Take the connection string from the environment; do not construct it. | [Connect page](" in readiness_md
+    assert "| IVF sizing | Recommended IVF parameters |" in readiness_md
+    assert "Not needed for this sample. The app is tested with pytest." in readiness_md
+    assert "Answered correctly from memory: Q01." in readiness_md
+    run_info = json.loads((run_dir / "run.json").read_text())
+    assert run_info["verdicts"]["readiness_score"].endswith("(v1)")
+
     insights = aggregate(settings.runs_dir)
-    assert "No confusions recorded." in insights           # could_not_verify is not counted as a wrong answer
+    assert "`amazon_documentdb`" not in insights             # could_not_verify is not counted as a wrong answer
+    assert "Q03 Which Bicep resource type?" in insights        # outdated is
     assert "Q04 Connection string?" in insights and "vector index parameters (1 samples" in insights
     assert "I chose pymongo 4.x" in insights
     assert "Model believed (amazon_documentdb): Connect on port 27017 / Source says: Connect on port 10260 (1 samples)" in insights
