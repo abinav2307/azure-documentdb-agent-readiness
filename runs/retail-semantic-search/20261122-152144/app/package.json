@@ -1,0 +1,21 @@
+{
+  "name": "retail-semantic-search",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Session-personalized LlamaIndex recommendations on Azure DocumentDB",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/cli.js",
+    "ingest": "node --env-file-if-exists=.env scripts/seed.js",
+    "verify:live": "node --env-file-if-exists=.env scripts/verify-live.js",
+    "test": "node --test",
+    "check": "node scripts/syntax-check.js"
+  },
+  "dependencies": {
+    "@llamaindex/openai": "0.4.22",
+    "@llamaindex/workflow": "1.1.24",
+    "llamaindex": "0.12.1",
+    "mongodb": "6.22.0"
+  }
+}

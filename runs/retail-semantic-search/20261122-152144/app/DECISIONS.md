@@ -1,0 +1,22 @@
+# Supplemental decision trail
+
+The audit tool returned `Function failed` on two consecutive calls after the initial decisions. Further decisions are recorded here **before acting** rather than repeatedly calling the failed tool.
+
+- I used Node.js filesystem inspection of installed declarations because workspace search returned no matches in node_modules. Alternative: guess APIs. Source: tool_result.
+- I retained matched dependency pins pending security review. `npm install` reported 3 high-severity vulnerabilities; `npm audit --json` failed with HTTP 429 and retry-after 901. Alternative: force-upgrade unknown packages or repeat rate-limited requests. Source: tool_result. A clean audit is not established.
+- I chose a direct exact pin `@llamaindex/workflow@1.1.24` and its current `agent` / `run` APIs instead of deprecated OpenAIAgent. Installed declarations show compatible core 0.6.22/env 0.1.30 peers, explicit chatHistory input and run result data. Source: tool_result.
+- I chose built-in node:test with dependency injection and a fake tool-calling LLM to execute the real LlamaIndex workflow offline, plus a one-shot live verification script. Alternative: no tests or only mocked agent code. Source: model_default; live credentials are unavailable.
+- I will not modify the MCP cluster to validate DiskANN: MCP shows an unrelated retail.products IVF index, no orders collection, and no app-readable credentials or confirmed M30 tier. Alternative: overwrite that index or copy existing vectors. Source: readiness_report/tool_result. Live verification requires user-supplied target credentials and authorization.
+- I chose fail-closed explanation validation (exactly the five ranked IDs, nonempty reasons) and explicit provider errors, rather than fabricating AI explanations on failure. Source: model_default.
+- I chose config validation using the MongoDB driver's URI parser plus SRV native-auth requirements, disallowing all TLS bypass URI options. Connection errors omit raw exception text to avoid URI/credential leakage. Source: skill (security-tls-required) and model_default (error presentation).
+- I chose scripts/seed.js and scripts/syntax-check.js instead of scripts/ingest.js and scripts/check.js because write_file rejected those two paths as 'outside the workspace' despite relative paths. The scripts/verify-live.js path succeeded. Alternative: retry or bypass path protections. Source: tool_result. npm command names remain ingest and check.
+
+- I chose to add contextWindow metadata to the offline FakeLLM rather than alter application memory wiring: npm test failed twice in workflow cases with Cannot read properties of undefined (reading contextWindow) at Memory.getLLM; the real OpenAI adapter supplies metadata. Source: tool_result.
+
+- I chose JSON.stringify for retrieval tool results instead of returning a JavaScript object: the installed LlamaIndex FunctionTool formats objects as inspection text, causing the offline model JSON parser to fail. FakeLLM will also handle tool errors as a model would, letting the application surface the captured retrieval error. Source: tool_result (second npm test failure). I will use a targeted test run to validate this path before rerunning the suite.
+
+- I reverted retrieval output to an object and made the offline FakeLLM read the installed workflow's human-readable tool message format. Installed core stringifyJSONToMessageContent removes JSON quotes, so stringifying the object does not preserve JSON. Alternative: patch framework internals. Source: tool_result. The live model can read the native format; output validation still expects JSON.
+
+- I chose a read-only driver connectivity check after verify:live reached OPENAI_API_KEY is missing rather than DOCUMENTDB_URI is missing. This shows an environment URI may be supplied despite the readiness inventory. I will load config with requireModel=false, ping and inspect the isolated sample collections without printing secrets or writing data; live model/seed verification remains blocked. Alternative: assume all credentials absent. Source: tool_result.
+
+- Driver connect/ping passed with the runner-provided environment URI; retail_semantic_sample has no collections and zero products/orders. The live co-purchase aggregation was accepted with an empty result and unknown-product handling passed. No data/index changes were made. I chose to report these limited live checks separately from unverified DiskANN/model/ingestion behavior. Source: tool_result.

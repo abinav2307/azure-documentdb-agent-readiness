@@ -1,0 +1,1620 @@
+{
+  "verdict": "pass_with_findings",
+  "summary": "Documentation search was reachable. The app implements the requested Node.js LlamaIndex product-ID recommender, DiskANN retrieval, session personalization, and repeatable 20,000-order ingestion. Before publication, add transient database-write retries, document and measure vector tuning, clarify runtime identity separation, and complete authorized live verification and dependency security review. The reference requirements describe a different Python/IVF HTTP-search application; those conflicts are not builder failures. The prompt review correctly predicted the runtime, model, representation, index, endpoint, infrastructure, and tuning-documentation misses. Its configuration, offline-test, and README risks mostly did not materialize. Eleven offline tests passed in the machine trace, but paid embeddings, DiskANN retrieval, recommendation quality, and Node.js 22 execution remain unverified. The decision logger repeatedly overwrote D002 before failing; events preserve choices missing from decisions.jsonl. No demonstrated correctness or security defect justifies failure, but this is not yet a fully verified publication candidate.",
+  "requirement_results": [
+    {
+      "requirement": "The app is a Python Flask app.",
+      "status": "not_met",
+      "evidence": "app/package.json:5-19 and app/src/cli.js:15-47 implement JavaScript/Node.js, not Python or Flask.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Align the reference with the explicit Node.js prompt. If Python is intended instead, replace 'Node.js LlamaIndex agent' with 'Python Flask app'; do not ask a skill to override the requested runtime."
+    },
+    {
+      "requirement": "Products are stored in an Azure DocumentDB collection.",
+      "status": "met",
+      "evidence": "app/src/ingestion.js:42-52 writes products to the products collection through the database client in app/src/database.js:12-28.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Product titles and descriptions are embedded with text-embedding-ada-002.",
+      "status": "partly_met",
+      "evidence": "app/src/ingestion.js:40-47 embeds titles and descriptions plus co-purchase context; app/src/config.js:5 selects text-embedding-3-small, not ada-002.",
+      "cause": "prompt_silent",
+      "smallest_fix": "If this model choice is intentional, add 'Use text-embedding-ada-002' to the prompt. Otherwise update the reference to the documented text-embedding-3-small example; the vector skill requires consistency, not ada-002."
+    },
+    {
+      "requirement": "Embeddings are stored as BSON binary vectors.",
+      "status": "not_met",
+      "evidence": "app/src/repository.js:95-101 returns numeric arrays; app/src/ingestion.js:47-52 stores those arrays.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Correct the reference to the documented numeric-array representation. The fetched Azure DocumentDB vector page requires number[]; do not add a binary-storage rule without service-specific support documentation."
+    },
+    {
+      "requirement": "A vector-ivf index exists on the embedding field.",
+      "status": "not_met",
+      "evidence": "app/src/repository.js:3-19 defines and creates vector-diskann, as the starter prompt explicitly requested.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Align the reference with DiskANN, or explicitly replace DiskANN with IVF in the prompt if that is the desired sample."
+    },
+    {
+      "requirement": "/search takes a natural language query, embeds it, and returns the 10 most similar products.",
+      "status": "not_met",
+      "evidence": "app/src/cli.js:15-33 accepts product IDs; app/src/recommendations.js:25 returns five items. No HTTP route exists.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Align the reference with the product-ID CLI, or explicitly request an HTTP /search route accepting natural-language input and returning ten results."
+    },
+    {
+      "requirement": "The connection string and model credentials come from environment variables; none appear in the repository.",
+      "status": "met",
+      "evidence": "app/src/config.js:17-42 reads DOCUMENTDB_URI and OPENAI_API_KEY; app/.env.example:3-4 contains placeholders; app/.gitignore:2-4 excludes populated env files. app/test/sample.test.js:12-15,64 uses clearly fake parser fixtures, not real credentials.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "A .env.example lists every setting with placeholder values.",
+      "status": "partly_met",
+      "evidence": "app/.env.example:3-4 lists both environment inputs. Database, models, dimensions, and embedding version remain fixed settings in app/src/config.js:3-9 rather than appearing in that inventory.",
+      "cause": "skill_silent",
+      "smallest_fix": "Add a sample-packaging rule: inventory every setting, distinguish fixed defaults from configurable environment inputs, and include placeholders for every required input."
+    },
+    {
+      "requirement": "The vector index dimensions match the embedding model's output.",
+      "status": "met",
+      "evidence": "app/src/config.js:5-6 selects text-embedding-3-small/1536; app/src/models.js:12 requests those dimensions; app/src/repository.js:7 and 95-101 enforce 1536.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "The vector index parameters are chosen for the catalog size, and the README says how to change them for a larger one.",
+      "status": "partly_met",
+      "evidence": "app/src/catalog.js:11-22 defines 60 products; app/src/repository.js:7-8,50 uses default-like DiskANN values. app/README.md:7-10 states values but gives no larger-catalog tuning procedure or measurements.",
+      "cause": "skill_silent",
+      "smallest_fix": "Extend the vector skill with a gallery rule requiring a README tuning section: catalog vector count, default rationale, representative recall/latency measurements, and where to change maxDegree, lBuild, k, and lSearch."
+    },
+    {
+      "requirement": "One database client is created and reused across requests.",
+      "status": "met",
+      "evidence": "app/src/database.js:3-28 caches the connected client and connection promise. app/src/config.js:33-34 constructs an additional unconnected parser-only client, not a request connection pool.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "A seed script loads sample products and creates the index, and can be run twice without duplicating data.",
+      "status": "met",
+      "evidence": "app/scripts/seed.js:11-16 invokes ingestion; app/src/ingestion.js:11-20,42-55 uses stable-ID upserts and creates indexes. app/test/sample.test.js:90-100,118-139 tests repeatability.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "/search returns a clear error for an empty query and when the embedding call fails.",
+      "status": "not_met",
+      "evidence": "No /search route exists. Analogous CLI product-input errors appear in app/src/cli.js:23 and app/src/recommendations.js:52-53; ingestion provider errors are wrapped in app/scripts/seed.js:15-18.",
+      "cause": "prompt_silent",
+      "smallest_fix": "If the HTTP sample is intended, explicitly request /search and its empty-input/provider-error contract. Otherwise change the reference to the product-ID and ingestion interfaces actually requested."
+    },
+    {
+      "requirement": "Search results include the similarity score.",
+      "status": "met",
+      "evidence": "app/src/repository.js:51-54 projects searchScore; app/src/recommendations.js:21-24,41 preserves similarityScore in the returned recommendations.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Dependencies are pinned in requirements.txt.",
+      "status": "partly_met",
+      "evidence": "app/package.json:15-19 exact-pins dependencies and app/package-lock.json:10-14 records them. requirements.txt is absent because this is Node.js.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Make the reference runtime-neutral: 'Dependencies are exact-pinned in the runtime's manifest and lockfile.' Require requirements.txt only for a Python prompt."
+    },
+    {
+      "requirement": "Unit tests run without a live cluster.",
+      "status": "met",
+      "evidence": "app/test/sample.test.js:27-55,90-139,162-179 uses a fake model and database doubles. events.jsonl:151,159 records successful npm test runs.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "Infrastructure for the cluster is provided as code, using the Azure DocumentDB resource type.",
+      "status": "not_met",
+      "evidence": "No infrastructure files exist. app/README.md:18 requires an existing cluster; events.jsonl:91 explicitly logs omission of provisioning files.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Add a gallery-packaging skill rule: include optional, nonexecuted parameterized Microsoft.DocumentDB/mongoClusters infrastructure, or explicitly document an approved existing-cluster-only exception. Deployment skills teach how to provision but do not require artifacts for every app."
+    },
+    {
+      "requirement": "The README covers what the sample shows, prerequisites, setup, run, and clean-up.",
+      "status": "met",
+      "evidence": "app/README.md:5-23,25-49,51-88,131-136 covers all five areas.",
+      "cause": "none",
+      "smallest_fix": ""
+    },
+    {
+      "requirement": "The sample uses the name Azure DocumentDB throughout, and no former or neighbouring product name.",
+      "status": "partly_met",
+      "evidence": "app/README.md:1-3 correctly identifies Azure DocumentDB, but line 3 explicitly names neighboring services to disambiguate them; several later passages abbreviate the service to DocumentDB. No neighboring service is presented as the target.",
+      "cause": "prompt_silent",
+      "smallest_fix": "Clarify the gallery naming rule: require correct identification and permit explicit disambiguation and unchanged API names. If literal exclusion is intended, state that separately; it is stricter than the public naming guidance."
+    }
+  ],
+  "checks": [
+    {
+      "topic": "Connection client reuse",
+      "practice": "One client is created and reused for the life of the process.",
+      "category": "Connection",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P09",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/persist-agent-state",
+      "status": "followed",
+      "evidence": "app/src/database.js:3-28,35-39 caches one connected client and closes it at shutdown; the parser-only client in app/src/config.js:33-34 never connects.",
+      "source": "Use LangGraph with Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Use LangGraph with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/persist-agent-state"
+        },
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        },
+        {
+          "title": "documentdb-driver",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/driver/SKILL.md"
+        },
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Driver connection recommendations",
+      "practice": "Connection settings (timeouts, retry options, TLS) follow the service's recommendation for the chosen driver.",
+      "category": "Connection",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P36",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md",
+      "status": "not_assessable",
+      "evidence": "app/src/database.js:14-22 follows native-auth examples and context-based timeout guidance, but retryWrites recommendations conflict.",
+      "source": "documentdb-connection; P04, P10 and P37 supply the other connection recommendations",
+      "searched": "Compared the connection and security skills, native Node.js quickstart, Entra connection page, and Amazon migration guide. No reconciled retryWrites support matrix was found.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        },
+        {
+          "title": "documentdb-security",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "Connect to Azure DocumentDB using role-based access control and Microsoft Entra ID",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control"
+        },
+        {
+          "title": "Migrate from Amazon DocumentDB to Azure DocumentDB (with MongoDB compatibility)",
+          "url": "https://learn.microsoft.com/azure/documentdb/migrate-amazon-documentdb#update-your-application"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Pinned supported driver",
+      "practice": "The driver version is pinned and is one the service supports.",
+      "category": "Connection",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/package.json:19 pins mongodb 6.22.0. The fetched compatibility page supports MongoDB wire-protocol drivers; events.jsonl:153 records a successful driver connect/ping.",
+      "source": "checklist only",
+      "searched": "Searched 'Azure DocumentDB Node.js supported MongoDB driver version pinned dependencies' and loaded documentdb-driver. Found broad protocol compatibility and npm install mongodb, but no combined version-pinning policy or tested release list.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A Node.js driver page listing tested releases/runtime combinations and a gallery rule requiring exact pins plus a lockfile."
+    },
+    {
+      "topic": "Repository secret exclusion",
+      "practice": "No password, key or full connection string appears in source, config, tests or README.",
+      "category": "Authentication and secrets",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P12",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-cli#view-the-cluster",
+      "status": "followed",
+      "evidence": "app/src/config.js:17-42 reads secrets from the environment; app/.env.example:3-4 contains placeholders; app/.gitignore:2-4 excludes populated files. app/test/sample.test.js:12-15,64 contains explicitly nonsecret test fixtures.",
+      "source": "Quickstart: Create an Azure DocumentDB cluster by using Azure CLI",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Quickstart: Create an Azure DocumentDB cluster by using Azure CLI",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-cli#view-the-cluster"
+        },
+        {
+          "title": "Migrate from Amazon DocumentDB to Azure DocumentDB (with MongoDB compatibility)",
+          "url": "https://learn.microsoft.com/azure/documentdb/migrate-amazon-documentdb#update-your-application"
+        },
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        },
+        {
+          "title": "documentdb-local-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/local-deployment/SKILL.md"
+        },
+        {
+          "title": "documentdb-azure-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/azure-deployment/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Authentication choice rationale",
+      "practice": "The sample uses the authentication method the prompt asked for; if Microsoft Entra ID is available for the scenario, it is used or the reason for not using it is stated.",
+      "category": "Authentication and secrets",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control",
+      "status": "followed",
+      "evidence": "The prompt specifies no auth mechanism. app/src/database.js:16 uses SCRAM; events.jsonl:88 explicitly states that native authentication keeps the local sample small. Move that rationale into the published README.",
+      "source": "documentdb-security",
+      "searched": "Searched Azure DocumentDB Microsoft Entra ID recommended authentication Node.js and read security-entra-rbac. Found 'prefer Entra when available' and a shared-secret fallback; the open discovery's separate-identities practice was not the same recommendation.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-security",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md"
+        },
+        {
+          "title": "Connect to Azure DocumentDB using role-based access control and Microsoft Entra ID",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Complete configuration example",
+      "practice": "A .env.example (or equivalent) lists every required setting with placeholder values.",
+      "category": "Authentication and secrets",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/.env.example:3-4 lists both required environment inputs; app/src/config.js:17-42 consumes only those inputs.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB samples .env.example every required setting and read local-env-driven-config. Found instructions to commit an example and individual configuration inventories, but no complete-inventory rule for gallery apps.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery configuration rule requiring all required inputs, placeholders, defaults, fixed settings, and secret handling to be inventoried together."
+    },
+    {
+      "topic": "Access aligned documents",
+      "practice": "Document shapes match the access patterns the sample demonstrates.",
+      "category": "Data model",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/src/catalog.js:16-22,46-50 stores bounded baskets referencing products; app/src/repository.js:27-35,64-82 reads containing orders and product vectors without joins.",
+      "source": "documentdb-data-modeling",
+      "searched": "Loaded documentdb-data-modeling and model-embed-vs-reference. Found access-pattern-driven embedding/reference rules. P06's specific product/order prescription was only prior knowledge and was not promoted to this broader public rule.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-data-modeling",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Bounded document growth",
+      "practice": "Documents cannot grow without bound (no unbounded arrays).",
+      "category": "Data model",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/src/catalog.js:38-50 bounds order items to 2–4; app/src/repository.js:95-101 bounds vectors to 1536 elements. No append-to-document history exists.",
+      "source": "documentdb-data-modeling",
+      "searched": "Read model-embed-vs-reference: reference children that grow unbounded and embed only bounded relationships. P33's size limit alone was not treated as the same recommendation.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-data-modeling",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Shard choice explanation",
+      "practice": "If the collection is sharded, the shard key choice is explained.",
+      "category": "Data model",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_applicable",
+      "evidence": "app/README.md:23 describes unsharded collections; setup contains no sharding command.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB sharded collection shard key choice explain access patterns. Found partitioning guidance on choosing keys by read/write patterns, but no explicit sample requirement to publish the rationale.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery schema-design rule requiring a documented shard-key rationale whenever a sample shards collections."
+    },
+    {
+      "topic": "Query index coverage",
+      "practice": "Every query pattern in the app is served by an index, and no index is unused.",
+      "category": "Indexing and queries",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/src/repository.js:17-19,29,50,69 and app/src/ingestion.js:14,42,48,56-57 align _id lookups/upserts/count filters, basket matching, and vector search with _id, multikey, and DiskANN indexes. Actual planner use remains separately unverified.",
+      "source": "documentdb-indexing",
+      "searched": "Searched every query pattern index/no unused indexes and read index-count-budget. Found explicit actual-filter/sort indexing and unused-index removal rules; P40 alone did not include the complete recommendation.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-indexing",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/indexing/SKILL.md"
+        },
+        {
+          "title": "Indexing Best Practices in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-create-indexes#queryable-fields-should-always-have-indexes-created"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Vector sizing suitability",
+      "practice": "Vector indexes use a type and parameters that suit the data size, with the embedding dimensions matching the model.",
+      "category": "Indexing and queries",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P01",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "not_assessable",
+      "evidence": "app/src/repository.js:3-9 matches model dimensions and the requested DiskANN type. Parameter suitability for 60 products has no recall/latency evidence.",
+      "source": "Integrated vector store in Azure DocumentDB; P28 supplies tuning guidance",
+      "searched": "Read repository.js, catalog.js, tests, live verifier, README and events. Found default-like values and disclosed unmeasured quality, but no representative tuning results.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Supported lexical search",
+      "practice": "Full-text or hybrid search uses the service's supported mechanism.",
+      "category": "Indexing and queries",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_applicable",
+      "evidence": "app/src/repository.js:48-55 implements vector-only retrieval; no lexical search is used.",
+      "source": "documentdb-full-text-search",
+      "searched": "Loaded documentdb-full-text-search by name. It specifies createSearchIndexes, BM25 $search, and RRF hybrid retrieval; no matching relevant practice appeared in open discovery.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-full-text-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/full-text-search/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Supported aggregation operators",
+      "practice": "Aggregation pipelines use only stages and operators the service supports.",
+      "category": "Indexing and queries",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language",
+      "status": "followed",
+      "evidence": "app/src/repository.js:27-35,48-55 uses documented $match, $unwind, $group, $sum, $sort, $search, $project, $meta and cosmosSearch. events.jsonl:154 confirms the co-purchase pipeline was accepted on an empty collection.",
+      "source": "MongoDB Query Language (MQL) compatibility in Azure DocumentDB",
+      "searched": "Searched aggregation stages/operators compatibility and fetched the versioned compatibility matrix and vector page. All operators used here are listed as supported.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "MongoDB Query Language (MQL) compatibility in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/compatibility-query-language"
+        },
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Transient failure retries",
+      "practice": "Transient failures are retried in the way the service recommends.",
+      "category": "Reliability",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P15",
+      "source_url": "https://learn.microsoft.com/azure/reliability/reliability-documentdb",
+      "status": "violated",
+      "evidence": "app/src/database.js:17-18 enables read retries but disables write retries. app/src/ingestion.js:16,20,48-52 has no bounded application retry; app/scripts/seed.js:17-18 exits and asks for a manual rerun.",
+      "source": "Reliability in Azure DocumentDB",
+      "searched": "",
+      "fix": "Wrap idempotent seed writes in bounded transient-only exponential-backoff retries with jitter. Do not blindly change retryWrites until the conflicting service guidance is reconciled.",
+      "sources": [
+        {
+          "title": "Reliability in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/reliability/reliability-documentdb"
+        },
+        {
+          "title": "Recommendations for handling transient faults",
+          "url": "https://learn.microsoft.com/azure/well-architected/design-guides/handle-transient-faults"
+        },
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Batched bulk ingestion",
+      "practice": "Bulk loads are batched.",
+      "category": "Reliability",
+      "availability": "discovered_and_listed",
+      "discovery_id": "P16",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs-select-algorithm#create-the-algorithm-comparison-code",
+      "status": "followed",
+      "evidence": "app/src/ingestion.js:11-20 awaits sequential 500-operation collection.bulkWrite batches; app/test/sample.test.js:90-100 verifies batch sizes.",
+      "source": "Quickstart: Vector index with TypeScript in Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Quickstart: Vector index with TypeScript in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs-select-algorithm#create-the-algorithm-comparison-code"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Service native infrastructure",
+      "practice": "Infrastructure is defined as code using the service's own resource type, not a neighbouring service's.",
+      "category": "Provisioning",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep",
+      "status": "violated",
+      "evidence": "No infrastructure artifact exists; app/README.md:18 requires an existing cluster. events.jsonl:91 logs this deliberate omission.",
+      "source": "documentdb-azure-deployment",
+      "searched": "Searched infrastructure as code Microsoft.DocumentDB/mongoClusters and read the deployment skill/template and current Bicep quickstart. Found the correct resource type and reproducible templates, not a requirement to execute deployment.",
+      "fix": "Include an optional parameterized cluster template without deploying it, or obtain an explicit gallery exception for existing-cluster-only samples.",
+      "sources": [
+        {
+          "title": "documentdb-azure-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/azure-deployment/SKILL.md"
+        },
+        {
+          "title": "Quickstart: Deploy an Azure DocumentDB cluster using Bicep",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Parameterized cluster cost",
+      "practice": "Tier, storage and region are parameters, with defaults that keep cost low.",
+      "category": "Provisioning",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_applicable",
+      "evidence": "No cluster provisioning occurs; app/README.md:18,23 uses an existing M30+ cluster.",
+      "source": "documentdb-azure-deployment",
+      "searched": "Read deployment Step 0.5 and references/bicep-cluster-template.md after searching parameterized tier/storage/region low-cost defaults. They provide workload-specific defaults and parameters; DiskANN must not inherit an M10/free-tier default.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-azure-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/azure-deployment/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Safe cleanup instructions",
+      "practice": "Clean-up steps are provided.",
+      "category": "Provisioning",
+      "availability": "listed_found_by_name_only",
+      "discovery_id": "",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep",
+      "status": "followed",
+      "evidence": "app/README.md:131-136 covers process shutdown, dedicated database deletion, secret removal/revocation, and continuing cluster charges.",
+      "source": "Quickstart: Deploy an Azure DocumentDB cluster using Bicep",
+      "searched": "Cleanup searches returned Node.js, Go-agent and Bicep quickstarts. Deployment Step 10 also documents teardown with confirmation; this sample appropriately limits cleanup to its own data.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Quickstart: Deploy an Azure DocumentDB cluster using Bicep",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-bicep"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "Quickstart: Build an AI agent with vector search in Azure DocumentDB using Go",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-agent-go#run-the-sample"
+        },
+        {
+          "title": "documentdb-azure-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/azure-deployment/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Complete sample README",
+      "practice": "The README states what the sample shows, prerequisites, setup, run and clean-up steps.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/README.md:5-23,25-49,51-88,131-136 covers all required sections.",
+      "source": "checklist only",
+      "searched": "Searched gallery README purpose/prerequisites/setup/run/cleanup and inspected relevant skills. Found quickstarts demonstrating the structure, but no gallery README contract.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery contribution page and agent-kit README template with those five mandatory sections."
+    },
+    {
+      "topic": "Documented command execution",
+      "practice": "The sample runs with the commands in the README.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/package.json:8-13 maps documented commands to existing files. events.jsonl:148-159 confirms check, help, tests and npm ci --no-audit, but live ingestion/recommendations were not completed.",
+      "source": "checklist only",
+      "searched": "Searched samples README commands must run and reviewed command definitions and build events. No sample verification policy was found; model credentials and seeded DiskANN data were unavailable.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery verification contract requiring clean-machine installation, exact README-command tests, declared external prerequisites, and an authorized managed-DiskANN integration run."
+    },
+    {
+      "topic": "Offline test contract",
+      "practice": "Tests exist and pass without a live cloud resource, or the README says what they need.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/test/sample.test.js:27-55,118-139,162-179 runs offline doubles through the real workflow; app/README.md:110-127 separates offline and live tests. events.jsonl:159 records success.",
+      "source": "checklist only",
+      "searched": "Searched Azure DocumentDB unit tests without live cluster and sample contribution requirements; local skill guidance concerns container integration tests, not a gallery offline-unit-test policy.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery testing rule and Node.js example using database/provider doubles, plus a separately gated live verifier."
+    },
+    {
+      "topic": "Pinned sample dependencies",
+      "practice": "Dependencies are pinned.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/package.json:15-19 and app/package-lock.json:10-14 exact-pin direct dependencies and lock transitive versions.",
+      "source": "checklist only",
+      "searched": "Searched exact pinned dependencies/lockfile gallery requirements and loaded driver guidance. Public quickstarts install packages without a general exact-pinning rule.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery dependency rule requiring exact direct versions, a committed lockfile, supported runtime verification, and vulnerability review."
+    },
+    {
+      "topic": "Correct service naming",
+      "practice": "The sample names the service correctly and does not use a former or neighbouring product name.",
+      "category": "Sample hygiene",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "followed",
+      "evidence": "app/README.md:1-3 and app/package.json:6 correctly identify Azure DocumentDB. Neighboring names appear only in explicit disambiguation, not as the sample's target; cosmosSearch is an unchanged API identifier.",
+      "source": "checklist only",
+      "searched": "Searched correct product name/not former Cosmos DB name and fetched FAQ/naming guidance. It distinguishes the products and retained APIs but does not state the checklist's repository-wide naming prohibition.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery naming rule distinguishing incorrect branding from legitimate disambiguation, retained URI/API/package names, and quoted historical guidance."
+    },
+    {
+      "topic": "Native LlamaIndex retrieval",
+      "practice": "Use $search with cosmosSearch vector, path and k; use the MongoDB driver for Node.js rather than assuming the Python-only connector is available.",
+      "category": "vector search integration",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P02",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base",
+      "status": "followed",
+      "evidence": "app/src/repository.js:48-55,73 and app/src/recommendations.js:60-79 implement native aggregation in an agent tool.",
+      "source": "Use LlamaIndex with Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        },
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "DiskANN setup prerequisites",
+      "practice": "Check cluster tier and service version for DiskANN support before index creation, failing clearly without substituting another index.",
+      "category": "provisioning",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P03",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/README.md:18 asks the operator to confirm M30+; app/scripts/seed.js:18 gives a clear failure and no fallback. No automated tier/version preflight exists.",
+      "source": "prior knowledge only",
+      "searched": "Open discovery found M30+ guidance but no complete service-version gate and no-fallback contract. Code and events contain no target metadata verification.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A DiskANN prerequisites table and read-only preflight tool returning target resource ID, tier, version, feature support and index permissions without secrets."
+    },
+    {
+      "topic": "RetryWrites source conflict",
+      "practice": "Do not automatically import Amazon DocumentDB's retryWrites=false workaround; Azure migration guidance says remove it while Azure vector/native quickstarts use false.",
+      "category": "connection compatibility",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P04",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/migrate-amazon-documentdb#update-your-application",
+      "status": "not_assessable",
+      "evidence": "app/src/database.js:17 uses false; app/README.md:40 explicitly attributes it to native-auth guidance rather than an Amazon assumption.",
+      "source": "Migrate from Amazon DocumentDB to Azure DocumentDB (with MongoDB compatibility)",
+      "searched": "Fetched migration, native Node.js and Entra connection pages and compared connection/security/deployment skills. False and true examples remain contradictory.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Migrate from Amazon DocumentDB to Azure DocumentDB (with MongoDB compatibility)",
+          "url": "https://learn.microsoft.com/azure/documentdb/migrate-amazon-documentdb#update-your-application"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        },
+        {
+          "title": "Quickstart: Vector index with TypeScript in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs-select-algorithm#create-the-algorithm-comparison-code"
+        },
+        {
+          "title": "Connect to Azure DocumentDB using role-based access control and Microsoft Entra ID",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control"
+        },
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        },
+        {
+          "title": "documentdb-security",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md"
+        },
+        {
+          "title": "documentdb-azure-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/azure-deployment/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Embedding input validation",
+      "practice": "Use consistent embedding model/preprocessing and reject mismatched dimensions and nonfinite vector elements.",
+      "category": "embeddings",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P05",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/repository.js:85-101 and app/src/ingestion.js:40-51 happen to implement metadata, dimension, finite-number and normalization checks.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found model/dimension guidance but no complete finite-number rejection rule for this service; reviewed validation and ingestion code.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A vector-skill validation rule covering finite numeric values, exact dimensions, nonzero norm, model identity and identical ingestion/query preprocessing."
+    },
+    {
+      "topic": "Separate product order schemas",
+      "practice": "Store one embedding-bearing document per product and purchase transactions separately, rather than treating every order as a searchable product.",
+      "category": "data modeling",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P06",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/ingestion.js:31,42-52 happens to store orders and embedded products separately.",
+      "source": "prior knowledge only",
+      "searched": "Discovery and loaded data-modeling guidance support generic embed/reference choices, not this retail-specific embedding prescription.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A retail recommendation sample explaining product-level embeddings, bounded order baskets, distinct-order co-purchase semantics and why orders are not individual product vectors."
+    },
+    {
+      "topic": "Business identifier uniqueness",
+      "practice": "Use unique indexes for natural business identifiers when they are separate from _id.",
+      "category": "indexing",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P07",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/indexing/SKILL.md",
+      "status": "not_applicable",
+      "evidence": "app/src/catalog.js:17,47 uses product/order business IDs directly as _id, so no separate natural-key unique index is needed.",
+      "source": "documentdb-indexing",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-indexing",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/indexing/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Candidate pool reranking",
+      "practice": "Overfetch candidates, exclude the input and duplicate IDs, apply co-purchase/session reranking, then select five.",
+      "category": "recommendation retrieval",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P08",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/repository.js:50,82 and app/src/recommendations.js:12-25 happen to implement a 30-item pool, exclusion, deduplication and reranking.",
+      "source": "prior knowledge only",
+      "searched": "Discovery searched recommendation overfetch/deduplication/session reranking without finding this complete public rule.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A recommendation recipe defining candidate overfetch, exclusion, deduplication, reranking and insufficient-candidate behavior."
+    },
+    {
+      "topic": "Verified TLS connections",
+      "practice": "Require TLS with certificate and hostname verification; fix CA trust rather than bypassing checks.",
+      "category": "connection security",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P10",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md",
+      "status": "followed",
+      "evidence": "app/src/config.js:27-33 rejects bypass options; app/src/database.js:15 requires TLS without disabling verification.",
+      "source": "documentdb-security",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-security",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md"
+        },
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        },
+        {
+          "title": "documentdb-local-deployment",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/local-deployment/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Safe startup validation",
+      "practice": "Validate URI configuration, await a bounded connect/ping, and distinguish missing, malformed, authentication and connectivity failures without exposing credentials.",
+      "category": "configuration validation",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P11",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/config.js:17-40 and app/src/database.js:20-31 implement safe validation and ping, but authentication/connectivity failures share one message.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found partial startup examples, not the complete validation/redaction/error-classification contract; reviewed entry points and config tests.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A connection-skill startup contract with safe error categories, URI parsing, bounded connect/ping and credential-redaction tests."
+    },
+    {
+      "topic": "Separate runtime identity",
+      "practice": "Use a read-only runtime identity and a separate privileged ingestion/setup identity with minimum supported permissions.",
+      "category": "authentication and authorization",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P13",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/secondary-users",
+      "status": "not_assessable",
+      "evidence": "app/.env.example:3 and app/src/config.js:18 expose one URI for both entry points. app/README.md:19 says runtime needs only read access, but does not instruct a credential switch; actual roles are unknown.",
+      "source": "Read and read/write privileges with secondary native users on Azure DocumentDB",
+      "searched": "Reviewed configuration, seed/runtime entry points and README. No separate identity configuration, role inventory or evidence of the supplied user's permissions exists.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Read and read/write privileges with secondary native users on Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/secondary-users"
+        },
+        {
+          "title": "documentdb-security",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md"
+        },
+        {
+          "title": "Connect to Azure DocumentDB using role-based access control and Microsoft Entra ID",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-connect-role-based-access-control"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Universal timeout limits",
+      "practice": "Set finite server-selection, connect and wait-queue timeouts and maxTimeMS on expensive queries.",
+      "category": "timeouts",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P14",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/database.js:20-21 sets two timeouts; app/src/repository.js:40,73 sets no query maxTimeMS, and no waitQueueTimeoutMS is supplied.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found scenario-specific timeout guidance, not a universal mandate for every option. The sequential CLI context does not establish that every remembered limit is required.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A workload-specific timeout table covering sequential CLIs, ingestion/index builds and concurrent APIs, including when explicit query and queue limits are necessary."
+    },
+    {
+      "topic": "Deterministic seed upserts",
+      "practice": "Use deterministic order IDs and updateOne/$setOnInsert upserts for repeatable transaction seeding.",
+      "category": "ingestion idempotency",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P17",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/catalog.js:47 and app/src/ingestion.js:14 achieve repeatability with deterministic IDs and replacement upserts, not the remembered $setOnInsert mechanism.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found stable-ID upsert examples and operator support, but no transaction-seeding prescription requiring $setOnInsert.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A seed-script rule comparing replacement and insert-only upserts, deterministic IDs, interruption recovery and preservation of user-modified data."
+    },
+    {
+      "topic": "Co purchase index verification",
+      "practice": "Index the order-item product path and verify containing-order lookup uses it with explain.",
+      "category": "indexing",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P18",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-index",
+      "status": "not_assessable",
+      "evidence": "app/src/repository.js:18,29 creates/uses the multikey path. app/scripts/verify-live.js:29-31 has an explain assertion, but events.jsonl:150 shows the verifier stopped before it ran.",
+      "source": "Scenario based guide to indexing in Azure DocumentDB",
+      "searched": "Reviewed verifier and execution trace. No seeded explain result exists; its text regex also does not prove that the winning/executed plan used the index.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Scenario based guide to indexing in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-index"
+        },
+        {
+          "title": "documentdb-indexing",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/indexing/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Distinct co purchase counting",
+      "practice": "Match containing orders first and count each companion product at most once per order.",
+      "category": "queries and recommendation correctness",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P19",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/repository.js:29-34 happens to deduplicate order/product pairs before summing.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found aggregation operators and early-filter guidance, not a distinct-per-order co-purchase correctness rule.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A tested co-purchase aggregation example with duplicate-line, quantity, anchor-exclusion and distinct-order semantics."
+    },
+    {
+      "topic": "Minimal recommendation context",
+      "practice": "Project only ranking/explanation fields and exclude embeddings and raw orders from responses and LLM context.",
+      "category": "query efficiency and privacy",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P20",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/repository.js:51-54 and app/src/recommendations.js:21-24,66 happen to send projected product summaries and aggregate counts rather than vectors or orders.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found selective projection examples but no complete response/LLM privacy contract for recommendations.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "An agent-sample privacy rule defining allowed provider context and explicitly excluding vectors, raw transactions and customer identifiers unless required and consented."
+    },
+    {
+      "topic": "Owned bounded session memory",
+      "practice": "Use authenticated ownership or unguessable session IDs and bound memory history and lifetime.",
+      "category": "agent memory",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P21",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/memory.js:7-20,36-39 bounds sessions/turns but uses caller-chosen IDs without ownership or expiry. app/README.md:104 explicitly limits this to a local sequential CLI.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found persistence/session examples but no complete ownership and retention rule; no authenticated multi-user API exists here.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A session-memory security guide separating local CLI labels from web/API sessions, with ownership checks, random IDs, retention and concurrency examples."
+    },
+    {
+      "topic": "Grounded recommendation explanations",
+      "practice": "Ground explanations in retrieved attributes/counts/session preferences and validate returned IDs against ranked candidates.",
+      "category": "agent grounding",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P22",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/recommendations.js:33-41,79 validates IDs and instructs grounding; factual reasoning is not independently validated, as app/README.md:102 acknowledges.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found retrieval grounding, but not a complete ranked-ID membership and factual explanation validation contract.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "An agent-output rule with fixed candidate membership, trusted-field merging, explanation evidence references and tests for fabricated purchases/preferences."
+    },
+    {
+      "topic": "Index drift readiness checks",
+      "practice": "Use idempotent setup comparing existing index definitions and verify vector readiness before recommendations.",
+      "category": "provisioning and verification",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P23",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/repository.js:17-19 creates named indexes without explicit drift comparison/readiness polling. app/scripts/verify-live.js:21-26 compares definitions only in a separate unexecuted verifier.",
+      "source": "prior knowledge only",
+      "searched": "Discovery found name-based idempotency, index listing and readiness examples, but no full definition-drift setup contract.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A vector setup rule with normalized definition comparison, drift errors, bounded readiness probing and explicit permission requirements."
+    },
+    {
+      "topic": "Embedding lifecycle metadata",
+      "practice": "Persist model identity/version and source-content hash, regenerating embeddings when source content or model changes.",
+      "category": "embedding lifecycle",
+      "availability": "prior_knowledge_only",
+      "discovery_id": "P24",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "app/src/ingestion.js:40-51 happens to use source hashes and model/dimension/version metadata to reuse or regenerate embeddings.",
+      "source": "prior knowledge only",
+      "searched": "Discovery and vector-normalize-embeddings cover model/version metadata and backfills, but not the complete content-hash lifecycle recommendation.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "An embedding lifecycle page specifying source hashes, provider/model revision identifiers, normalization versions, cache invalidation and deliberate index rebuilds."
+    },
+    {
+      "topic": "Restricted database networking",
+      "practice": "Use private endpoints or explicit firewall allowlists rather than unrestricted public access.",
+      "category": "network security",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P25",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/security",
+      "status": "not_assessable",
+      "evidence": "app/README.md:20 prohibits open-all-IP access, but the existing cluster's actual network configuration is absent.",
+      "source": "Secure your Azure DocumentDB cluster",
+      "searched": "Reviewed README, infrastructure absence and readiness/build events. No resource ID or firewall/private-endpoint inventory is available to this auditor.",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Secure your Azure DocumentDB cluster",
+          "url": "https://learn.microsoft.com/azure/documentdb/security"
+        },
+        {
+          "title": "documentdb-security",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/security/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Unit length COS embeddings",
+      "practice": "Verify COS text vectors are unit-length and normalize ingestion vectors when needed.",
+      "category": "embeddings",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P26",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md",
+      "status": "followed",
+      "evidence": "app/src/ingestion.js:47 stores normalizeVector output; app/src/repository.js:95-101 computes L2 normalization; app/test/sample.test.js:104-105 verifies its norm.",
+      "source": "documentdb-vector-search",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Measured DiskANN search tuning",
+      "practice": "Keep k <= lSearch and tune lSearch within 10–1000 against measured recall and latency.",
+      "category": "vector search tuning",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P27",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "violated",
+      "evidence": "app/src/repository.js:50 correctly uses k=30/lSearch=40, but app/README.md:127 and the execution trace provide no measured tuning.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": "Retain the legal defaults for the demo, add a representative recall/latency benchmark, and document how to adjust lSearch while maintaining k <= lSearch.",
+      "sources": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Measured DiskANN build tuning",
+      "practice": "Tune maxDegree and lBuild on representative data rather than assuming defaults meet accuracy/build-cost requirements.",
+      "category": "vector index tuning",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P28",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "violated",
+      "evidence": "app/src/repository.js:8 uses 32/50; app/README.md:9 states the values without measurements or scaling instructions.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": "Label these as unbenchmarked teaching defaults and add a tuning procedure measuring recall, build time and resource usage on representative catalogs.",
+      "sources": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Vector eligibility prefiltering",
+      "practice": "When filtering vector candidates, place eligibility predicates inside cosmosSearch.filter and index the filtered properties.",
+      "category": "filtered vector search",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P29",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "violated",
+      "evidence": "app/src/repository.js:50,82 applies anchor and metadata exclusions after ANN retrieval. The deliberate overfetch makes this defensible for the tiny homogeneous catalog, but it differs from public prefilter guidance.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": "Push anchor eligibility into cosmosSearch.filter using the existing _id index. If supporting mixed-model catalogs, prefilter model metadata with the corresponding standard indexes rather than filtering after top-k.",
+      "sources": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        },
+        {
+          "title": "documentdb-vector-search",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/vector-search/SKILL.md"
+        },
+        {
+          "title": "Use LlamaIndex with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/query-knowledge-base"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Projected vector similarity",
+      "practice": "Project $meta: searchScore when ranking depends on similarity.",
+      "category": "vector result handling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P30",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "followed",
+      "evidence": "app/src/repository.js:53 projects searchScore; app/src/recommendations.js:19-23 uses and preserves it.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Numeric array vector storage",
+      "practice": "Store searchable vectors using the documented number[] representation.",
+      "category": "vector storage",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P31",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "followed",
+      "evidence": "app/src/repository.js:95-101 validates/returns numeric arrays; app/src/ingestion.js:47-49 persists them.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Single vector path index",
+      "practice": "Use one indexed vector and one vector index per vector path.",
+      "category": "vector index constraints",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P32",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/vector-search",
+      "status": "followed",
+      "evidence": "app/src/ingestion.js:49 stores one embedding; app/src/repository.js:3-19 defines one index on that path.",
+      "source": "Integrated vector store in Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Integrated vector store in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/vector-search"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "BSON document size",
+      "practice": "Keep documents below the 16 MB limit, accounting for embedded-array growth.",
+      "category": "data modeling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P33",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/limitations",
+      "status": "followed",
+      "evidence": "app/src/catalog.js:16-22,38-50 creates small fixed strings and 2–4 item baskets; app/src/repository.js:95-101 bounds embedding length to 1536.",
+      "source": "Azure DocumentDB service limits and quotas reference",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Azure DocumentDB service limits and quotas reference",
+          "url": "https://learn.microsoft.com/azure/documentdb/limitations"
+        },
+        {
+          "title": "documentdb-data-modeling",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Versioned document schemas",
+      "practice": "Include schemaVersion in evolving document schemas.",
+      "category": "schema evolution",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P34",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md",
+      "status": "followed",
+      "evidence": "app/src/catalog.js:21,48 includes schemaVersion in products and orders.",
+      "source": "documentdb-data-modeling",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-data-modeling",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Read path denormalization",
+      "practice": "Denormalize small slow-changing read-path fields to avoid repeated lookup operations.",
+      "category": "data modeling",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P35",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md",
+      "status": "followed",
+      "evidence": "app/src/catalog.js:18-20 stores title/category/description together; app/src/ingestion.js:38-50 materializes small co-purchase embedding context. app/src/repository.js:27-55 needs no $lookup.",
+      "source": "documentdb-data-modeling",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-data-modeling",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/data-modeling/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Context based connection tuning",
+      "practice": "Choose pool/timeouts from concurrency and operation duration, retaining default pool sizing unless measured needs justify changes.",
+      "category": "connection tuning",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P36",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md",
+      "status": "followed",
+      "evidence": "D002; app/src/database.js:7-22 explains sequential CLI/default pools and bounded startup without a short index-build socket timeout.",
+      "source": "documentdb-connection",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Enabled retryable reads",
+      "practice": "Enable retryReads for supported transient read failures.",
+      "category": "connection retries",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P37",
+      "source_url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md",
+      "status": "followed",
+      "evidence": "app/src/database.js:18 sets retryReads: true.",
+      "source": "documentdb-connection",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "documentdb-connection",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/connection/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Portal copied encoded URI",
+      "practice": "Use Azure's cluster connection string, replace placeholders and percent-encode reserved credential characters.",
+      "category": "connection configuration",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P38",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/tutorial-nodejs-web-app#test-the-mern-application-with-the-azure-documentdb-cluster",
+      "status": "followed",
+      "evidence": "app/README.md:35 requires a portal-copied, encoded URI rather than a synthesized host; app/src/config.js:19-36 rejects placeholders and malformed URIs.",
+      "source": "Tutorial: Connect a Node.js web app with Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Tutorial: Connect a Node.js web app with Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/tutorial-nodejs-web-app#test-the-mern-application-with-the-azure-documentdb-cluster"
+        },
+        {
+          "title": "Quickstart: Use Azure DocumentDB with MongoDB driver for Node.js",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-nodejs"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Post load secondary indexes",
+      "practice": "Create nonessential indexes after large initial ingestion to reduce write amplification.",
+      "category": "ingestion indexing",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P39",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-create-indexes#queryable-fields-should-always-have-indexes-created",
+      "status": "followed",
+      "evidence": "app/src/ingestion.js:31-32 creates the order index after initial order loading, when needed for co-purchase reads; line 55 creates DiskANN after product embeddings.",
+      "source": "Indexing Best Practices in Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Indexing Best Practices in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-create-indexes#queryable-fields-should-always-have-indexes-created"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Purpose built query indexes",
+      "practice": "Index actual queryable fields rather than all fields or speculative wildcard indexes.",
+      "category": "index cost",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P40",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/how-to-create-indexes#queryable-fields-should-always-have-indexes-created",
+      "status": "followed",
+      "evidence": "app/src/repository.js:3-19 creates only the vector and order-item indexes, both used by lines 29 and 50.",
+      "source": "Indexing Best Practices in Azure DocumentDB",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Indexing Best Practices in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/how-to-create-indexes#queryable-fields-should-always-have-indexes-created"
+        },
+        {
+          "title": "documentdb-indexing",
+          "url": "https://github.com/Azure/documentdb-agent-kit/blob/main/skills/indexing/SKILL.md"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Small unsharded workload",
+      "practice": "Keep this small workload single-shard unless measured size or traffic exceeds one shard's capacity.",
+      "category": "capacity and cost",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P43",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/pricing-explained",
+      "status": "followed",
+      "evidence": "app/README.md:23 and events.jsonl:84 explain unsharded collections for 60 products/20,000 small orders; setup does not shard collections or scale the existing cluster.",
+      "source": "Azure DocumentDB pricing explained",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Azure DocumentDB pricing explained",
+          "url": "https://learn.microsoft.com/azure/documentdb/pricing-explained"
+        },
+        {
+          "title": "Sharding for horizontal scalability in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/partitioning"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Nonsensitive database names",
+      "practice": "Exclude personal, sensitive and confidential information from database/resource names and tags.",
+      "category": "naming and governance",
+      "availability": "discovered_not_listed",
+      "discovery_id": "P45",
+      "source_url": "https://learn.microsoft.com/azure/documentdb/quickstart-portal#create-a-cluster",
+      "status": "followed",
+      "evidence": "app/src/config.js:4 uses retail_semantic_sample; app/src/ingestion.js:31,42 uses generic orders/products names. Session/user labels are not used as resource names.",
+      "source": "Quickstart: Create an Azure DocumentDB cluster by using the Azure portal",
+      "searched": "",
+      "fix": "",
+      "sources": [
+        {
+          "title": "Quickstart: Create an Azure DocumentDB cluster by using the Azure portal",
+          "url": "https://learn.microsoft.com/azure/documentdb/quickstart-portal#create-a-cluster"
+        },
+        {
+          "title": "Sharding for horizontal scalability in Azure DocumentDB",
+          "url": "https://learn.microsoft.com/azure/documentdb/partitioning#how-to-shard-a-collection"
+        }
+      ],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Decision persistence integrity",
+      "practice": "Persist distinct decision records without losing previously logged choices.",
+      "category": "audit trail",
+      "availability": "discovered_not_listed",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "violated",
+      "evidence": "events.jsonl:83-92 returns 'Recorded as D002' for ten distinct choices; decisions.jsonl retains only D002 and D002b. events.jsonl:100-101 then records logger exceptions. Index/auth/model choices were logged in events, not silently made.",
+      "source": "machine-written events and decisions.jsonl",
+      "searched": "",
+      "fix": "Fix unique-ID allocation and atomic append/validation in log_decision; recover distinct event-backed decisions with provenance rather than attributing the loss to the builder.",
+      "sources": [],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Unlogged package registry choice",
+      "practice": "Record environment-specific package-registry choices that affect sample reproducibility.",
+      "category": "audit trail",
+      "availability": "discovered_not_listed",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "violated",
+      "evidence": "app/package-lock.json:22,36,47,60 pins tarball URLs to the runner's ms-feed-25.pkgs.visualstudio.com feed; no decision explains public portability of this registry choice.",
+      "source": "app/package-lock.json and decision trail",
+      "searched": "",
+      "fix": "Document and verify anonymous clean-machine access to the pinned feed, or regenerate and review the lockfile using the intended public registry. Log the publishing choice.",
+      "sources": [],
+      "what_would_help": ""
+    },
+    {
+      "topic": "Dependency security verification",
+      "practice": "Resolve or explicitly assess reported dependency vulnerabilities before publication.",
+      "category": "publication verification",
+      "availability": "listed_not_found",
+      "discovery_id": "",
+      "source_url": "",
+      "status": "not_assessable",
+      "evidence": "events.jsonl:94 reports three high-severity findings; line 98 records npm audit HTTP 429. app/README.md:129 discloses them, but affected packages and exploitability are unknown.",
+      "source": "checklist only",
+      "searched": "Reviewed installation/audit trace, lockfile and README. No successful advisory report or service-specific sample security-release policy was available.",
+      "fix": "",
+      "sources": [],
+      "what_would_help": "A gallery security gate and an available dependency-audit tool returning advisory details, affected paths, compatible remediation options and exceptions."
+    }
+  ],
+  "decision_reviews": [
+    {
+      "decision_id": "D001",
+      "assessment": "sound",
+      "comment": "Operator approval with readiness gaps is consistent with the supplied readiness verdict. The machine tool trace does not independently record the --yes operator flag, so the approval reason is operator-supplied rather than tool-verified. It did not authorize unreported live verification or resource changes."
+    },
+    {
+      "decision_id": "D002",
+      "assessment": "sound",
+      "comment": "The sequential CLI and sequential seed writes support default pool sizing and bounded startup waits. documentdb-connection was loaded at events.jsonl:55; its context-first/default-pool guidance supports the reason. app/src/database.js:7-22 implements it. The model_default label understates the available skill and native-quickstart support."
+    },
+    {
+      "decision_id": "D002b",
+      "assessment": "sound",
+      "comment": "events.jsonl:73-74,80-81 verifies the claimed provider peer mismatch/match and latest returned MongoDB 6.x version; app/package.json:15-19 implements the pins. This establishes dependency compatibility reasoning, not a clean security audit or Node.js 22/live-DiskANN certification. The logger's repeated D002 IDs and later exceptions are genuine tool failures, not evidence of unlogged builder choices."
+    }
+  ],
+  "doc_gaps": [
+    {
+      "topic": "Canonical retryable-write support",
+      "what_was_missing": "P04 contradicts the model's Amazon DocumentDB-derived belief that retryWrites=false is universally required. Azure migration guidance says remove it, while native/vector quickstarts use false and security/Entra code examples use true. The public record does not settle the applicable rule.",
+      "where_searched": "Fetched Azure DocumentDB migration, native Node.js, vector and Entra pages; read connection, security and deployment skills; compared supplied readiness findings.",
+      "effect_on_this_build": "The builder used false with an explicit caveat. Driver-settings compliance cannot be fully assessed, and ingestion needs an application retry strategy.",
+      "proposed_fix_type": "learn_doc",
+      "proposed_content": "Ship 'Azure DocumentDB driver retry support matrix': native/OIDC authentication, supported operation types, driver/server versions and topology; define retryReads/retryWrites behavior, transient-write recovery and idempotent backoff. Link it prominently from migration/vector quickstarts and synchronize every skill example.",
+      "priority": "high"
+    },
+    {
+      "topic": "Gallery packaging and release contract",
+      "what_was_missing": "No explicit public gallery contract was found for complete configuration examples, README sections, runnable README commands, offline tests, exact dependency pins/tested drivers, naming consistency or vulnerability gates. Existing quickstarts demonstrate fragments but do not state the combined expectations.",
+      "where_searched": "Learn searches for .env.example completeness, gallery contribution requirements, README commands, offline tests, dependency pins and naming; driver/local/deployment skills and fetched FAQ/quickstarts.",
+      "effect_on_this_build": "Most hygiene was supplied by builder assumptions, but fixed-setting inventory is incomplete under the literal reference, Node.js 22 and live commands remain unverified, the lockfile uses a runner feed, and three high-severity findings lack assessment.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Ship 'Publishable Azure DocumentDB sample contract': required README sections; complete required-input/fixed-default inventory; placeholder-only examples; exact manifests/lockfiles; clean public-registry installation; tested driver/runtime table; offline tests; separately authorized managed-service tests; successful vulnerability assessment; correct branding with explicit allowances for disambiguation and retained API names.",
+      "priority": "high"
+    },
+    {
+      "topic": "Sample infrastructure inclusion policy",
+      "what_was_missing": "The deployment skill teaches correct IaC but does not say whether every gallery app must include nonexecuted templates. The prompt never requested provisioning; the run policy prohibited resource changes, not writing optional infrastructure.",
+      "where_searched": "Deployment skill and Bicep template, current Bicep quickstart, app README, events.jsonl:91 and reference requirements.",
+      "effect_on_this_build": "No infrastructure artifacts were generated, despite the team's checklist/reference expecting them.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Add: 'Gallery samples include optional parameterized Microsoft.DocumentDB/mongoClusters IaC, unless an approved existing-cluster-only exception is documented. Generating templates does not authorize deployment. Feature prerequisites override cheap generic defaults: DiskANN needs a supported paid tier.' Include cleanup scoped to resources actually created.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Findable service practice entry point",
+      "what_was_missing": "Authentication preference, access-aligned/bounded modeling, complete query-index lifecycle, aggregation compatibility, IaC parameters/resource type, cleanup and lexical/hybrid mechanisms were found only when searched by checklist name or loaded directly.",
+      "where_searched": "Named searches and documentdb-security, documentdb-data-modeling, documentdb-indexing, documentdb-full-text-search and documentdb-azure-deployment; compatibility and Bicep/Node.js quickstarts.",
+      "effect_on_this_build": "Several practices were followed, but an open search did not surface the full expectations. Infrastructure inclusion was missed; Entra's rationale exists only in the event trail.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Ship 'Build and review an Azure DocumentDB sample' as the landing-page/agent-kit entry point. Link explicitly to security-entra-rbac, bounded/access-pattern modeling, query/index usage review, compatibility matrix, current deployment templates, cleanup and createSearchIndexes hybrid guidance. Keep supported-versus-recommended distinctions visible.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Documented shard rationale",
+      "what_was_missing": "Public guidance explains how to choose shard keys, but no explicit requirement to publish a sample's shard-key rationale was found.",
+      "where_searched": "Azure DocumentDB partitioning/FAQ searches and gallery packaging searches.",
+      "effect_on_this_build": "No immediate effect: the sample deliberately remains unsharded. Future sharded samples may omit rationale.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Add to the gallery schema rule: 'When sharding, document dominant query/write patterns, cardinality/distribution, expected scale, supporting index and why this key was chosen; otherwise explain why one shard suffices.'",
+      "priority": "low"
+    },
+    {
+      "topic": "Node.js agent recommendation recipe",
+      "what_was_missing": "P06, P08, P19, P20 and P22 remain training-derived compound practices: product/order separation, candidate overfetch/reranking, distinct-order counting, minimal provider context and ranked-ID/factual grounding. The LlamaIndex guide documents a Python connector and Node driver fallback, not the requested JavaScript agent/memory composition.",
+      "where_searched": "Open discovery's retail/co-purchase/grounding searches, fetched LlamaIndex/vector pages, modeling guidance and installed workflow evidence in events.",
+      "effect_on_this_build": "The builder implemented defensible versions from assumptions and offline framework inspection. Ranking weights and factual explanation quality are unmeasured; these practices cannot be used as service-specific deductions.",
+      "proposed_fix_type": "sample_or_quickstart",
+      "proposed_content": "Ship 'Node.js LlamaIndex retail recommendations with Azure DocumentDB': a tested SDK release set; product and order schemas; duplicate-line/quantity semantics; 20,000-order/60-product seed; native retrieval tool; exclusion/deduplication/reranking; fixed-ID response merging; provider-context privacy; insufficient-candidate failures; explicit quality limitations and benchmark.",
+      "priority": "high"
+    },
+    {
+      "topic": "Vector validation and lifecycle contract",
+      "what_was_missing": "P05 and P24 have partial public building blocks but no complete finite-vector validation and source-hash/model-revision lifecycle guidance. The vector skill also lacks the reference's mandatory README scaling/tuning section.",
+      "where_searched": "Open discovery's finite-vector/content-hash searches, vector-normalize-embeddings, vector-create-diskann-index, fetched vector/LlamaIndex pages and app ingestion.",
+      "effect_on_this_build": "Validation/hash caching were implemented by assumption. Default DiskANN parameters were not benchmarked, and larger-catalog tuning instructions are absent.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Extend the vector skill with finite/nonzero/exact-dimension validation; consistent ingestion/query preprocessing; model/revision/normalization metadata and source hashes; re-embedding/index-rebuild triggers. Require sample READMEs to state vector count, unbenchmarked defaults, adjustment locations and a representative recall/latency/build-cost measurement procedure.",
+      "priority": "high"
+    },
+    {
+      "topic": "Repeatable setup and readiness",
+      "what_was_missing": "P17's insert-only seed prescription and P23's definition-drift/readiness contract were not publicly confirmed. Public examples provide upserts, index listing and name-based idempotency separately.",
+      "where_searched": "Open discovery seed/setup searches, fetched Node.js/LlamaIndex/vector guidance, app seed and live verifier.",
+      "effect_on_this_build": "Stable replacement upserts work offline, but setup does not explicitly compare index drift or gate recommendations on bounded readiness checks.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Ship 'Repeatable seed and vector setup': deterministic IDs; replacement versus $setOnInsert tradeoffs; batch/transient recovery; existing-definition comparison; no silent index substitution/deletion; bounded readiness probe and clear drift errors. State which requirements are service rules versus sample policy.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Startup errors and timeout profiles",
+      "what_was_missing": "P11 and P14's complete startup/redaction and universal timeout rules were not publicly established. D002 is labeled model_default even though the connection skill and native quickstart answer most of its choices.",
+      "where_searched": "Connection/driver/security skills, native Node.js quickstart, open discovery timeout/startup searches, D002 and events.jsonl:55,77,90.",
+      "effect_on_this_build": "Safe parsing, two finite startup timeouts and ping exist, but auth/connectivity categories are combined; the auditor cannot impose remembered queue/query limits universally.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Link context-first connection guidance from the Node.js quickstart and add profiles for sequential CLI, long index builds and concurrent APIs. Define safe startup error categories and redaction tests, and explicitly say when waitQueueTimeoutMS/maxTimeMS should or should not be set.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Session memory ownership boundaries",
+      "what_was_missing": "P21's authenticated ownership, unguessable IDs and lifetime contract has no complete public service-specific source. Session/thread persistence examples do not establish these security guarantees.",
+      "where_searched": "Open discovery agent-memory searches, readiness's JavaScript memory API gap, app memory/CLI/README and LlamaIndex integration guidance.",
+      "effect_on_this_build": "Memory is bounded and isolated by label, but not authorized or expiring. This is acceptable only within the explicitly local CLI boundary, not as a ready-to-expose multi-user API.",
+      "proposed_fix_type": "learn_doc",
+      "proposed_content": "Ship 'Secure agent session memory': local CLI versus hosted trust boundaries; authenticated owner binding; random session identifiers; ownership checks; history/time limits; eviction/concurrency; provider-data minimization. Include the exact JavaScript history injection API.",
+      "priority": "high"
+    },
+    {
+      "topic": "Read only target readiness inventory",
+      "what_was_missing": "The auditor cannot assess P03, P13, P18 or P25 fully: target tier/version/features, runtime roles, executed index plans and networking are not available. Documentation describes the controls but the tools do not establish this target's readiness.",
+      "where_searched": "Readiness/build events, README, seed/runtime configuration, live verifier, security/secondary-user/compatibility/vector guidance.",
+      "effect_on_this_build": "The verifier stopped for missing model credentials; no seeded DiskANN/explain results exist. One URI serves both setup and runtime, and network/role posture is unknown.",
+      "proposed_fix_type": "mcp_tool_or_description",
+      "proposed_content": "Provide an authorized read-only 'inspect_sample_target' tool: resource identity, tier/version/vector support, network posture, current data-plane roles, collection/index definitions and winning/executed explain plan. Redact credentials, distinguish ARM from database roles, and return unknown rather than assuming readiness. Add explicit separate setup/runtime credential-switch instructions.",
+      "priority": "high"
+    },
+    {
+      "topic": "Reliable decision logging",
+      "what_was_missing": "log_decision reused D002 for distinct calls, lost records and then failed validation. Supplemental Markdown and events preserve intent, but the structured decision file is incomplete.",
+      "where_searched": "decisions.jsonl, app/DECISIONS.md and events.jsonl:83-101,106,126.",
+      "effect_on_this_build": "Only three decisions survive in decisions.jsonl; auth/index/model/interface/isolation choices require event reconstruction. The builder's fallback is supported by actual exceptions.",
+      "proposed_fix_type": "mcp_tool_or_description",
+      "proposed_content": "Make log_decision append-only and atomic with unique IDs, validation before write, corruption recovery and a structured fallback sink. Preserve reason_source and evidence for every record; never overwrite earlier IDs.",
+      "priority": "high"
+    },
+    {
+      "topic": "Model default verification assumptions",
+      "what_was_missing": "Supplemental model_default choices cover offline workflow tests, fail-closed output and safe error presentation. No consolidated service sample guidance states their expected contract or verifies live factual reasoning.",
+      "where_searched": "app/DECISIONS.md:8,10-11; test/recommendation/config code; fetched LlamaIndex and relevant skills.",
+      "effect_on_this_build": "Offline behavior is strong, but agent explanations can still be inaccurate and live model/vector behavior is unverified.",
+      "proposed_fix_type": "agent_kit_rule",
+      "proposed_content": "Add a sample-agent rule requiring real-framework offline tests with provider/database doubles, captured retrieval errors, fixed-ID/trusted-field merging, safe provider/driver errors and separately declared live/quality evidence. Link the Node.js recommendation recipe instead of relying on framework memory.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Current identity and product terminology",
+      "what_was_missing": "Readiness exposed legacy Cosmos CLI/extension guidance, older deployment API defaults, synthesized endpoint examples and former vCore terminology in modeling resources. Current documentation distinguishes products, but skills/examples remain inconsistent.",
+      "where_searched": "Supplied readiness Q02/Q03/Q04 findings, loaded deployment/local/security/modeling resources, current Bicep/Node.js/Entra/FAQ pages.",
+      "effect_on_this_build": "The sample avoided obsolete provisioning and copied the portal URI, but future generated templates or copied skill hosts can be wrong. Correct naming required deliberate disambiguation.",
+      "proposed_fix_type": "naming_or_disambiguation",
+      "proposed_content": "Synchronize deployment guidance with az documentdb mongocluster/documentdb extension and explain supported versus recommended API versions. Replace synthesized mongocluster.documentdb.azure.com hosts with portal-URI placeholders. Rename modeling prose to Azure DocumentDB while preserving valid cosmosSearch/resource/URI identifiers. Add dated legacy-command migration notes.",
+      "priority": "high"
+    },
+    {
+      "topic": "Neighbor feature assumptions",
+      "what_was_missing": "Readiness also exposed remembered MongoDB community $text as the recommended search path, outdated cross-shard transaction restrictions, a wrong local GHCR organization/emulator assumption and a universal remembered EnableChangeStreams flag.",
+      "where_searched": "Supplied readiness Q09/Q10/Q11/Q12, loaded full-text/local skills, fetched compatibility matrix and supplied grounding links.",
+      "effect_on_this_build": "These features are not used by this app, so no violation is assigned. They remain documented risks for agents extending it from memory.",
+      "proposed_fix_type": "discoverability",
+      "proposed_content": "Prominently distinguish supported community $text from recommended preview BM25 createSearchIndexes; publish dated cross-shard transaction support; provide the current authenticated/TLS local gateway setup with a managed-DiskANN parity caveat; separate ordinary change streams, multishard preview and pre-image prerequisites without inventing a universal flag.",
+      "priority": "medium"
+    },
+    {
+      "topic": "Reference scenario disambiguation",
+      "what_was_missing": "The supplied reference labels Python/Flask, ada-002, BSON binary, IVF and a ten-result /search route as starter requirements even though the actual prompt requests Node.js, DiskANN and five product-ID recommendations. Binary vector storage also conflicts with the fetched service representation guidance.",
+      "where_searched": "requirements.md:12-17, prompt.md, prompt-review risks, vector skill and fetched vector page.",
+      "effect_on_this_build": "Several reference misses measure an inconsistent fixture rather than shortcomings in the builder or public documentation.",
+      "proposed_fix_type": "other",
+      "proposed_content": "Version and validate scenario requirements against the starter prompt before runs. Flag explicit runtime/index/interface conflicts and unsupported representation demands; keep desired gallery additions separate from contradictory example requirements.",
+      "priority": "high"
+    }
+  ]
+}

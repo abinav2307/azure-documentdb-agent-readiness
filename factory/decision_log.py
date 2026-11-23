@@ -15,6 +15,8 @@ The auditor reads both, which lets it check stated reasons against what ran.
 from __future__ import annotations
 
 import json
+import shutil
+import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -41,8 +43,32 @@ class DecisionLog:
     def read(self) -> list[Decision]:
         if not self.path.exists():
             return []
-        lines = self.path.read_text(encoding="utf-8").splitlines()
-        return [Decision.model_validate_json(line) for line in lines if line.strip()]
+        with _WRITE_LOCK:
+            lines = read_jsonl_lines(self.path)
+            try:
+                return [Decision.model_validate_json(line) for line in lines]
+            except ValueError:
+                return self._repair()
+
+    def _repair(self) -> list[Decision]:
+        """Recover a log damaged by concurrent writes (fixed since), keeping a backup of the original."""
+        records, leftover = recover_json_records(self.path.read_text(encoding="utf-8"), '{"id"')
+        decisions = sorted((Decision.model_validate(r) for r in records), key=lambda d: (d.timestamp, d.id))
+        seen: set[str] = set()
+        unique = []
+        for d in decisions:  # concurrent writes could also hand out the same id twice
+            if d.id in seen:
+                d = d.model_copy(update={"id": f"{d.id}b"})
+            seen.add(d.id)
+            unique.append(d)
+        backup = self.path.with_name("decisions.jsonl.damaged")
+        shutil.copyfile(self.path, backup)
+        self.path.write_text("".join(jsonl_line(d.model_dump(mode="json")) for d in unique), encoding="utf-8", newline="\n")
+        note = f"Repaired {self.path.name}: recovered {len(unique)} decisions; the original is kept as {backup.name}."
+        if leftover:
+            note += f" {len(leftover)} characters could not be recovered: {leftover[:120]!r}"
+        print(f"      NOTE: {note}", flush=True)
+        return unique
 
     def add(
         self,
@@ -55,18 +81,21 @@ class DecisionLog:
     ) -> Decision:
         if reason_source not in get_args(ReasonSource):
             raise ValueError(f"reason_source must be one of {', '.join(get_args(ReasonSource))}")
-        entry = Decision(
-            id=f"D{len(self.read()) + 1:03d}",
-            timestamp=_now(),
-            stage=stage,
-            decision=decision.strip(),
-            alternatives=[a.strip() for a in (alternatives or []) if a.strip()],
-            reason=reason.strip(),
-            reason_source=reason_source,  # type: ignore[arg-type]
-            evidence=evidence.strip(),
-        )
-        with self.path.open("a", encoding="utf-8") as f:
-            f.write(entry.model_dump_json() + "\n")
+        # The framework runs a round of tool calls in parallel threads, so numbering and
+        # writing happen under one lock, and each record goes to disk in a single write.
+        with _WRITE_LOCK:
+            existing = len(read_jsonl_lines(self.path))
+            entry = Decision(
+                id=f"D{existing + 1:03d}",
+                timestamp=_now(),
+                stage=stage,
+                decision=decision.strip(),
+                alternatives=[a.strip() for a in (alternatives or []) if a.strip()],
+                reason=reason.strip(),
+                reason_source=reason_source,  # type: ignore[arg-type]
+                evidence=evidence.strip(),
+            )
+            append_record(self.path, entry.model_dump(mode="json"))
         return entry
 
     def tool_for(self, stage: str):
@@ -124,8 +153,8 @@ class DecisionLog:
                 raise
             finally:
                 event["seconds"] = round(time.monotonic() - started, 2)
-                with events_path.open("a", encoding="utf-8") as f:
-                    f.write(json.dumps(event, ensure_ascii=False) + "\n")
+                with _WRITE_LOCK:
+                    append_record(events_path, event)
 
         return trace
 
@@ -163,6 +192,59 @@ class DecisionLog:
         text = "\n".join(out)
         self.markdown_path.write_text(text, encoding="utf-8")
         return text
+
+
+_WRITE_LOCK = threading.RLock()
+
+
+def append_record(path: Path, record: dict) -> None:
+    """Append one JSON Lines record with a single unbuffered write."""
+    with path.open("ab", buffering=0) as f:
+        f.write(jsonl_line(record).encode("utf-8"))
+
+
+def recover_json_records(text: str, start_marker: str) -> tuple[list[dict], str]:
+    """Pull every complete JSON object starting with start_marker out of damaged text.
+
+    Concurrent appends can leave one record's head, another whole record, then the
+    first record's tail. Taking out the whole records and the line breaks between the
+    pieces lets the split one be read on the next pass.
+    """
+    decoder = json.JSONDecoder()
+    records: list[dict] = []
+    rest = text
+    for _ in range(10):
+        found, kept, i = False, [], 0
+        while i < len(rest):
+            j = rest.find(start_marker, i)
+            if j < 0:
+                kept.append(rest[i:])
+                break
+            kept.append(rest[i:j])
+            try:
+                obj, end = decoder.raw_decode(rest, j)
+                records.append(obj)
+                found, i = True, end
+            except json.JSONDecodeError:
+                kept.append(rest[j])
+                i = j + 1
+        rest = "".join(kept).replace("\r", "").replace("\n", "")
+        if not found:
+            break
+    return records, rest.strip()
+
+
+def jsonl_line(record: dict) -> str:
+    """One JSON Lines record. ensure_ascii escapes characters such as U+2028 that some readers treat as line breaks."""
+    return json.dumps(record, ensure_ascii=True, default=str) + "\n"
+
+
+def read_jsonl_lines(path: Path) -> list[str]:
+    """Records split on newline only. str.splitlines() would also split on U+2028, U+0085 and others,
+    which can appear unescaped inside a JSON string and would cut a record in two."""
+    if not path.exists():
+        return []
+    return [line for line in path.read_text(encoding="utf-8").split("\n") if line.strip()]
 
 
 def _result_text(result: Any) -> str:

@@ -197,3 +197,51 @@ def test_readiness_reports_from_before_the_new_fields_still_load() -> None:
     report = ReadinessReport.model_validate(old)
     assert report.information_gaps[0].description == "gap" and report.guidance_for_builder[0].instruction == "do x"
     assert report.summary_points == ["s"] and report.inventory_recommendations == []
+
+
+@pytest.mark.parametrize("separator", ["\u2028", "\u2029", "\x85", "\x0b", "\x1c"])
+def test_decision_log_survives_unicode_line_separators(tmp_path: Path, separator: str) -> None:
+    log = DecisionLog(tmp_path)
+    log.add("build", f"I chose IVF{separator}per the vector-search normalization rule.", "r", "skill")
+    log.add("build", "second", "r", "prompt")
+    assert [d.decision for d in log.read()] == [f"I chose IVF{separator}per the vector-search normalization rule.", "second"]
+    assert all(ord(ch) < 128 for ch in log.path.read_text(encoding="utf-8"))   # written escaped
+
+
+def test_decision_log_reads_files_written_before_the_fix(tmp_path: Path) -> None:
+    # Old files hold the character raw inside a JSON string; that is valid JSON and must still load.
+    (tmp_path / "decisions.jsonl").write_text(
+        '{"id": "D001", "timestamp": "t", "stage": "build", "decision": "a\u2028b", "alternatives": [], '
+        '"reason": "r", "reason_source": "skill", "evidence": ""}\n'.replace("\\u2028", "\u2028"), encoding="utf-8")
+    assert DecisionLog(tmp_path).read()[0].decision == "a\u2028b"
+
+
+def test_decision_log_is_safe_under_parallel_tool_calls(tmp_path: Path) -> None:
+    import threading
+
+    log = DecisionLog(tmp_path)
+    long_reason = "x" * 20_000   # larger than a write buffer, so a non-atomic write would split it
+    threads = [threading.Thread(target=log.add, args=("build", f"decision {i}", long_reason, "skill")) for i in range(40)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    decisions = log.read()
+    assert len(decisions) == 40 and len({d.id for d in decisions}) == 40
+
+
+def test_decision_log_repairs_a_file_damaged_by_interleaved_writes(tmp_path: Path) -> None:
+    def record(i: str, text: str, second: int) -> str:
+        return json.dumps({"id": i, "timestamp": f"2026-11-22T00:00:0{second}+00:00", "stage": "build", "decision": text,
+                           "alternatives": [], "reason": "r", "reason_source": "skill", "evidence": ""})
+
+    a, b, c = (record("D001", "first", 1), record("D002", "I chose IVF per the vector-search normalization rule.", 2),
+               record("D002", "third", 3))
+    cut = len(b) - 30
+    # b's head, then all of a, then b's tail on its own line, then c (which also got a duplicate id).
+    (tmp_path / "decisions.jsonl").write_text(b[:cut] + a + "\n" + b[cut:] + "\n" + c + "\n", encoding="utf-8")
+    decisions = DecisionLog(tmp_path).read()
+    assert [d.decision for d in decisions] == ["first", "I chose IVF per the vector-search normalization rule.", "third"]
+    assert [d.id for d in decisions] == ["D001", "D002", "D002b"]
+    assert (tmp_path / "decisions.jsonl.damaged").exists()
+    assert len(DecisionLog(tmp_path).read()) == 3   # the repaired file now reads directly

@@ -10,6 +10,7 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from .decision_log import read_jsonl_lines
 from .models import AuditReport, Decision, DiscoveredPractices, ReadinessReport
 
 
@@ -62,8 +63,8 @@ def aggregate(runs_dir: Path) -> str:
                     unavailable[f"{t.name} ({t.kind})"] += 1
             accelerators.update(readiness.accelerators_missed)
         if (run_dir / "decisions.jsonl").exists():
-            for line in (run_dir / "decisions.jsonl").read_text(encoding="utf-8").splitlines():
-                if line.strip():
+            for line in read_jsonl_lines(run_dir / "decisions.jsonl"):
+                if line:
                     d = Decision.model_validate_json(line)
                     if d.reason_source == "model_default":
                         defaults.append((sample, d))
