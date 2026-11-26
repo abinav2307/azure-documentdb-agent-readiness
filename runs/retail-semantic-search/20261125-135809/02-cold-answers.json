@@ -1,0 +1,124 @@
+{
+  "answers": [
+    {
+      "question_id": "Q01",
+      "question": "What is the Azure resource provider namespace and resource type of an Azure DocumentDB cluster?",
+      "answer": "The resource provider is Microsoft.DocumentDB. A cluster is a Microsoft.DocumentDB/mongoClusters resource; its ARM ID is /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.DocumentDB/mongoClusters/{clusterName}.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q02",
+      "question": "Which Azure CLI command group creates and manages a cluster? Is it in the core CLI or an extension?",
+      "answer": "I would use az cosmosdb mongocluster, supplied by the cosmosdb-preview extension: az extension add --name cosmosdb-preview, followed by az cosmosdb mongocluster create --cluster-name <name> --resource-group <rg> --location <region> --administrator-login <user> --administrator-login-password <password> --server-version 7.0 --shard-node-tier M30 --shard-node-disk-size-gb 128.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q03",
+      "question": "Which Bicep and Terraform resource types deploy a cluster?",
+      "answer": "In Bicep, use Microsoft.DocumentDB/mongoClusters, for example resource cluster 'Microsoft.DocumentDB/mongoClusters@2024-07-01' = { ... }. In Terraform, use azurerm_mongo_cluster. If the AzureRM provider lacks a required property, use azapi_resource with type = \"Microsoft.DocumentDB/mongoClusters@2024-07-01\".",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q04",
+      "question": "What does a connection string look like: scheme, host suffix, port, and the options it must carry?",
+      "answer": "I would use mongodb+srv://<user>:<URL-encoded-password>@<cluster>.mongocluster.cosmos.azure.com/?tls=true&authMechanism=SCRAM-SHA-256&retryWrites=false&maxIdleTimeMS=120000. The host suffix is .mongocluster.cosmos.azure.com; some endpoints include .global before that suffix. SRV discovery supplies the endpoint and port, typically 10260, so do not append a port to a mongodb+srv URI. Require TLS, use SCRAM-SHA-256 for password authentication, and disable retryable writes.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q05",
+      "question": "How is capacity provisioned and billed: request units, compute tiers with vCores, serverless, or something else?",
+      "answer": "Capacity is provisioned through compute tiers with vCores and memory, plus configured storage, shard count, and optional high availability. Billing follows provisioned compute and storage rather than request units. I would select an M-series compute tier, not provision RU/s or use Cosmos DB's RU-based serverless model.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q06",
+      "question": "Which authentication methods are supported, and how does a driver authenticate with Microsoft Entra ID?",
+      "answer": "Use either native database credentials with SCRAM-SHA-256 or Microsoft Entra ID with MongoDB's MONGODB-OIDC authentication mechanism. For Node.js Entra authentication, configure MongoClient with authMechanism: 'MONGODB-OIDC' and authMechanismProperties.OIDC_CALLBACK; the callback obtains a token through DefaultAzureCredential.getToken('https://ossrdbms-aad.database.windows.net/.default') and returns { accessToken: token.token }. Provision a database identity and permissions for the Entra principal first; an Azure management-plane role alone does not grant database access.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q07",
+      "question": "Which client library should an application use? Is there a service-specific SDK?",
+      "answer": "Use a normal MongoDB driver. For this Node.js application, install mongodb and connect through MongoClient. No Azure-specific data-plane SDK is required. Azure management SDKs are for provisioning and configuring the cluster, not querying application documents.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q08",
+      "question": "Which vector index types are supported, and what does the command that creates one look like?",
+      "answer": "The vector index types are IVF, HNSW, and DiskANN, expressed as vector-ivf, vector-hnsw, and vector-diskann. For DiskANN I would run db.runCommand({ createIndexes: 'products', indexes: [{ name: 'embedding_diskann', key: { embedding: 'cosmosSearch' }, cosmosSearchOptions: { kind: 'vector-diskann', dimensions: 1536, similarity: 'COS', maxDegree: 32, lBuild: 100 } }] }). IVF uses numLists; HNSW uses m and efConstruction. The configured dimensions must match the stored embedding length.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q09",
+      "question": "How are full-text search and hybrid search done?",
+      "answer": "For full-text search, create a MongoDB text index, for example db.products.createIndex({ name: 'text', description: 'text' }), then query with { $text: { $search: 'running shoes' } } and rank using { $meta: 'textScore' }. Vector retrieval uses an aggregation $search stage containing cosmosSearch. For hybrid search, run text and vector retrieval and combine their rankings with reciprocal-rank fusion in application code; I would not assume Atlas Search's $search.text or $vectorSearch syntax works.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q10",
+      "question": "Which MongoDB wire protocol or server versions are supported, and which commonly used MongoDB features are not?",
+      "answer": "I would target MongoDB 7.0 compatibility and use a current MongoDB driver; the service also has compatibility options for 5.0 and 6.0. Compatibility is not identical to running upstream mongod. I would not rely on MongoDB server-side JavaScript such as $where or mapReduce, administrative replica-set commands, Atlas Search operators, or cross-shard distributed transactions. I would explicitly set retryWrites=false.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q11",
+      "question": "How do you run the database locally for development and tests: which image or emulator, and which port?",
+      "answer": "Use the open-source DocumentDB local container rather than the Cosmos DB RU emulator: docker run -d --name documentdb -p 10260:10260 ghcr.io/microsoft/documentdb/documentdb-local:latest. The MongoDB-compatible listener is on port 10260. Connect with a mongodb://localhost:10260 URI and the container's configured credentials and TLS settings.",
+      "confidence": "medium"
+    },
+    {
+      "question_id": "Q12",
+      "question": "Are change streams supported, and does anything have to be enabled first?",
+      "answer": "Yes, I would treat change streams as a feature that must be enabled on the cluster before use, rather than assuming they are active by default. I would enable the ChangeStreams cluster preview feature, then use collection.watch() through the MongoDB driver and persist resume tokens for restart recovery.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q13",
+      "question": "Which MCP server gives an agent data-plane tools for this service? Does the general Azure MCP Server cover it?",
+      "answer": "Use the dedicated DocumentDB MCP server, which I associate with Microsoft's documentdb-mcp project, for collection, document, and query tools. I would not use the general Azure MCP Server as the DocumentDB MongoDB data-plane connector; its Azure management and Cosmos DB tools are not interchangeable with these tools.",
+      "confidence": "low"
+    },
+    {
+      "question_id": "Q14",
+      "question": "What was this service called before, and how does it relate to Azure Cosmos DB and to the open-source DocumentDB project?",
+      "answer": "It was previously Azure Cosmos DB for MongoDB vCore. Azure DocumentDB is the renamed managed service, distinct from the RU-based Azure Cosmos DB for MongoDB offering. It is built on Microsoft's open-source DocumentDB project; that project is the database engine technology, while Azure DocumentDB adds managed Azure provisioning and operations. It is not Amazon DocumentDB.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "Q15",
+      "question": "What engine is underneath, and does that change anything in application code?",
+      "answer": "The engine is PostgreSQL-based, using the open-source DocumentDB extensions and a MongoDB-compatible gateway. Applications still use MongoDB drivers, BSON documents, MongoDB queries, and aggregation pipelines—not PostgreSQL connections or SQL. The underlying engine matters for supported features and service-specific indexing syntax, but does not require a PostgreSQL client in the app.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S01",
+      "question": "How should this sample create and query its product DiskANN index?",
+      "answer": "Store one product per document with an embedding array containing finite numeric values. Create a cosmosSearch index using kind: 'vector-diskann', dimensions matching the embedding model, and similarity: 'COS'. Retrieve candidates with products.aggregate([{ $search: { cosmosSearch: { vector: queryEmbedding, path: 'embedding', k: 20 }, returnStoredSource: true } }, { $project: { _id: 1, name: 1, description: 1, score: { $meta: 'searchScore' } } }]). Remove the input product, apply personalization and co-purchase ranking, then return five items.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S02",
+      "question": "How should the sample extract co-purchase evidence from transaction documents?",
+      "answer": "Use ordinary MongoDB aggregation rather than SQL. Store transactions as { _id, sessionId, purchasedAt, productIds: [...] } and create an index with transactions.createIndex({ productIds: 1 }). For an input product ID, aggregate with $match on productIds, $unwind productIds, $match to exclude the input product, $group by productIds with count: { $sum: 1 }, and $sort by count descending. Deduplicate each transaction's productIds during ingestion so counts represent co-purchase transactions rather than duplicate line items.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S03",
+      "question": "How should the Node.js sample connect and report missing or invalid configuration?",
+      "answer": "Read connectionString from a config file and require a nonempty mongodb:// or mongodb+srv:// URI. Construct MongoClient with a bounded serverSelectionTimeoutMS, then call connect() and db.command({ ping: 1 }) before ingestion or agent startup. Catch both URI parsing failures and connection/authentication failures and report a clear Azure DocumentDB configuration error without printing the URI or credentials. Use the mongodb driver, not @azure/cosmos.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S04",
+      "question": "How should the script ingest 20,000 purchase transactions into Azure DocumentDB?",
+      "answer": "Use MongoDB collection.bulkWrite() in batches of roughly 1,000 operations with ordered: false. Give each generated transaction a deterministic _id and use updateOne with upsert: true and $setOnInsert so rerunning ingestion does not create duplicates. Keep transaction ingestion separate from embedding generation: embed each distinct product once and upsert its document into products. Do not budget request units or introduce Cosmos DB partition-key fields for this vCore-based service.",
+      "confidence": "high"
+    },
+    {
+      "question_id": "S05",
+      "question": "How should session memory and recommendation reasoning work with this database?",
+      "answer": "Session memory is an application/LlamaIndex concern, not an automatic Azure DocumentDB feature. Persist it in a sessions collection keyed by session ID, containing preferences and recent recommendation history; load that state before retrieval and update it afterward with MongoDB operations. Build reasoning from retrieved product attributes, observed co-purchase counts, and recorded session preferences. Use the database's cosmosSearch aggregation through a custom LlamaIndex retriever or tool rather than assuming a MongoDB Atlas vector-store adapter emits compatible syntax.",
+      "confidence": "high"
+    }
+  ]
+}

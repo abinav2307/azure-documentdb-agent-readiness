@@ -1,0 +1,56 @@
+# 3. Build report: retail-semantic-search
+
+**Status: completed**
+
+Built a commented Node.js LlamaIndex recommendation CLI with session memory, DiskANN retrieval, co-purchase reranking, and deterministic ingestion of 20,000 transactions. Connection configuration references environment variables so secrets stay out of files. No database data, indexes, or Azure resources were changed during the build.
+
+## How to run
+
+Run npm ci. Copy config.example.json to config.json if needed. Set DOCUMENTDB_URI and OPENAI_API_KEY in your shell. Use an existing Azure DocumentDB M30+ cluster, then run npm run ingest, npm run verify, and npm start. For a single recommendation request, run node src/cli.js p0001. README includes session commands and cleanup instructions.
+
+## Verified by running
+
+- npm ci: dependency installation passed.
+- npm test: 12 tests passed, including actual LlamaIndex workflow execution with a mocked streaming model, session isolation/reset, idempotent ingestion, and CLI error handling.
+- npm run check: 12 JavaScript files passed syntax checking.
+- npm audit --omit=dev: zero vulnerabilities reported.
+- Application-driver TLS connection and database ping passed; isolated sample namespace was empty.
+- Read-only MCP inspection confirmed the existing retail.products IVF index remained untouched.
+- npm run ingest without OPENAI_API_KEY exited with a clear missing-key error before writes.
+
+## Not verified
+
+- Live embedding generation and model-backed recommendations: OPENAI_API_KEY was unavailable.
+- Live ingestion of 20,000 orders and DiskANN index creation/query behavior: no database writes were performed; the verification script is provided.
+- Target cluster M30+ tier and application write/index permissions were not confirmed.
+- Node.js 22 execution was not tested; verification ran on Node.js 26.13.0.
+- Recommendation relevance and explanation accuracy require live evaluation; ranking weights are disclosed sample defaults.
+- Azure AI best-practices router failed twice; available DocumentDB skills and current Microsoft Learn documentation were used instead.
+
+## Open issues
+
+None.
+
+## Files
+
+- `README.md`
+- `package.json`
+- `package-lock.json`
+- `config.example.json`
+- `config.json`
+- `.env.example`
+- `.gitignore`
+- `.nvmrc`
+- `src/config.js`
+- `src/db.js`
+- `src/data.js`
+- `src/recommendations.js`
+- `src/agent.js`
+- `src/errors.js`
+- `src/cli.js`
+- `scripts/ingest.js`
+- `scripts/verify.js`
+- `scripts/check.js`
+- `test/sample.test.js`
+- `test/cli.test.js`
+

@@ -1,0 +1,23 @@
+{
+  "name": "documentdb-retail-semantic-search",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "ingest": "node scripts/ingest.js",
+    "verify": "node scripts/verify.js",
+    "test": "node --test",
+    "check": "node scripts/check.js"
+  },
+  "dependencies": {
+    "@llamaindex/core": "0.6.22",
+    "@llamaindex/openai": "0.4.22",
+    "@llamaindex/workflow": "1.1.24",
+    "llamaindex": "0.12.1",
+    "mongodb": "6.22.0"
+  }
+}

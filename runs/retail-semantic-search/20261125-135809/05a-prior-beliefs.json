@@ -1,0 +1,179 @@
+{
+  "beliefs": [
+    {
+      "id": "K01",
+      "practice": "Create the product embedding index explicitly with createIndexes, using key: { embedding: \"cosmosSearch\" } and cosmosSearchOptions containing kind: \"vector-diskann\", dimensions matching the embedding model, and similarity: \"COS\" for cosine-based retrieval.",
+      "category": "vector search",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K02",
+      "practice": "Execute vector retrieval through an aggregation $search stage with cosmosSearch: { vector: queryEmbedding, path: \"embedding\", k: candidateCount }, rather than MongoDB Atlas's $vectorSearch stage.",
+      "category": "vector search",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K03",
+      "practice": "Use retryWrites=false in the MongoDB connection string unless Azure DocumentDB explicitly supports retryable writes for the deployment.",
+      "category": "connection handling",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K04",
+      "practice": "Provision a cluster tier that supports DiskANN and enough memory and storage for the intended vector count before attempting to create the vector index.",
+      "category": "provisioning",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K05",
+      "practice": "Store embeddings as numeric arrays whose length exactly matches the index dimensions, rejecting nonfinite values, zero-length arrays, and dimension mismatches before writing or searching.",
+      "category": "vector search",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K06",
+      "practice": "Use the same embedding model, model version, and input construction for indexed products and query products, and rebuild the embeddings and index when that embedding space changes.",
+      "category": "vector search",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K07",
+      "practice": "Configure DiskANN maxDegree and lBuild explicitly and tune them against measured recall, index-build time, and resource usage rather than assuming default parameters meet the recommendation workload.",
+      "category": "vector search",
+      "knowledge_about": "azure_cosmos_db",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K08",
+      "practice": "Retrieve more than five vector candidates, then apply co-purchase reranking, session preferences, source-product exclusion, and deduplication before taking the final five recommendations.",
+      "category": "queries",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K09",
+      "practice": "Keep one canonical product document and embedding per product ID in a products collection, with purchase transactions stored separately rather than duplicating product vectors across orders.",
+      "category": "data modeling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K10",
+      "practice": "Create an index on the transaction product-ID array, such as { productIds: 1 }, so co-purchase queries can match orders containing the input product without scanning every transaction.",
+      "category": "indexing",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K11",
+      "practice": "Make ingestion idempotent by assigning stable transaction IDs and product IDs and using upserts keyed by those IDs instead of inserting new duplicates on every run.",
+      "category": "data modeling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K12",
+      "practice": "Create and reuse one MongoClient per application process, sharing its connection pool across ingestion, retrieval, and agent operations rather than connecting separately for each request.",
+      "category": "connection handling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K13",
+      "practice": "Require TLS for database connections and leave certificate and hostname verification enabled; do not use tlsAllowInvalidCertificates or tlsAllowInvalidHostnames.",
+      "category": "connection handling",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K14",
+      "practice": "Keep database credentials and embedding-provider API keys outside committed configuration files, resolving environment-variable references or secret-store values at runtime and redacting secrets from errors and logs.",
+      "category": "authentication and secrets",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K15",
+      "practice": "Validate the resolved connection string at startup and perform a database ping with a finite serverSelectionTimeoutMS, reporting missing configuration, malformed URI, authentication failure, and connectivity failure as distinct actionable errors.",
+      "category": "connection handling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K16",
+      "practice": "Use a runtime database identity restricted to the application's required reads and writes, with index creation and other administrative operations assigned to a separate provisioning identity.",
+      "category": "authentication and secrets",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K17",
+      "practice": "Restrict database network access to the application's required endpoints through private connectivity or narrowly scoped firewall rules rather than permitting unrestricted public access.",
+      "category": "provisioning",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K18",
+      "practice": "Ingest the 20,000 transactions with bounded-size bulkWrite batches and bounded concurrency rather than issuing one insert per transaction or launching all writes simultaneously.",
+      "category": "queries",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K19",
+      "practice": "Retry only transient connection, throttling, or service errors with bounded exponential backoff and jitter, and ensure retried writes use stable identifiers so an ambiguous outcome cannot create duplicates.",
+      "category": "retries",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K20",
+      "practice": "Filter co-purchase orders by the input product before unwinding their product arrays, then exclude the input product and aggregate partner counts in the database instead of loading the full transaction collection into Node.js.",
+      "category": "queries",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K21",
+      "practice": "Use executionStats explain plans for co-purchase queries to verify index use and inspect documents examined, adding compound indexes only for actual filter and sort patterns.",
+      "category": "indexing",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K22",
+      "practice": "Keep session memory keyed by an explicit session ID, with bounded history and an expiration policy, so one session's preferences cannot influence another session's recommendations.",
+      "category": "data modeling",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K23",
+      "practice": "Keep transaction documents bounded in size and below MongoDB's 16 MiB BSON document limit; do not accumulate the full purchase history or all session messages in one growing document.",
+      "category": "data modeling",
+      "knowledge_about": "mongodb",
+      "confidence_it_holds_for_azure_documentdb": "medium"
+    },
+    {
+      "id": "K24",
+      "practice": "Make the provisioning or verification script inspect the existing vector index's field, kind, dimensions, and similarity, and fail clearly when they differ from configuration instead of silently continuing.",
+      "category": "provisioning",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    },
+    {
+      "id": "K25",
+      "practice": "Generate recommendation reasoning only from retrieved product information, observed co-purchase counts, and the current session's preferences, treating database text as data rather than instructions to the agent.",
+      "category": "queries",
+      "knowledge_about": "general",
+      "confidence_it_holds_for_azure_documentdb": "high"
+    }
+  ]
+}
